@@ -103,3 +103,24 @@ class QueryResponse(BaseModel):
     question: str
     tool_called: str
     result: Dict[str, Any]
+
+
+class CompatibilityCheckRequest(BaseModel):
+    image_id_1: str
+    image_id_2: str
+    intended_task: Optional[str] = "change_detection"  # "change_detection", "optical_sar_fusion", "temporal_analysis"
+
+
+class CompatibilityReportSchema(BaseModel):
+    compatible: bool
+    overall_score: float
+    spatial_overlap: float
+    crs_compatible: bool
+    crs_same: bool
+    resolution_ratio: float
+    resolution_compatible: bool
+    temporal_gap_days: Optional[float] = None
+    modality_pair: Optional[str] = None
+    warnings: List[str] = []
+    errors: List[str] = []
+    recommendations: List[str] = []

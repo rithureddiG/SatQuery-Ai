@@ -15,12 +15,15 @@ from ...geospatial import (
     validate_raster_metadata,
     ValidationResult,
 )
+from ...assets import InputSanitizer, AssetFactory, CompatibilityEngine
 from ...storage import storage_manager, generate_raster_preview
 from ..schemas import (
     ImageInspectionResponse,
     ValidationResultSchema,
     PreviewInfoSchema,
     RasterMetadataSchema,
+    CompatibilityCheckRequest,
+    CompatibilityReportSchema,
 )
 
 router = APIRouter(prefix="/api/v1/images", tags=["images"])
@@ -42,7 +45,23 @@ async def inspect_image(
         # 1. Save uploaded file safely
         saved_path = storage_manager.save_upload_file(file, image_id)
 
-        # 2. Validate file existence and size
+        # 2. Input sanitization & security checks
+        sanitizer = InputSanitizer()
+        san_res = sanitizer.sanitize(saved_path, original_filename=file.filename)
+        if not san_res.safe:
+            return ImageInspectionResponse(
+                id=image_id,
+                status="invalid",
+                metadata=None,
+                validation=ValidationResultSchema(
+                    valid=False,
+                    warnings=san_res.warnings,
+                    errors=san_res.errors,
+                ),
+                preview=PreviewInfoSchema(available=False),
+            )
+
+        # 3. Path validation check
         path_validation = validate_file_path(saved_path, max_size_mb=settings.max_upload_size_mb)
         if not path_validation.valid:
             return ImageInspectionResponse(
@@ -51,13 +70,20 @@ async def inspect_image(
                 metadata=None,
                 validation=ValidationResultSchema(
                     valid=False,
-                    warnings=path_validation.warnings,
-                    errors=path_validation.errors,
+                    warnings=path_validation.warnings + san_res.warnings,
+                    errors=path_validation.errors + san_res.errors,
                 ),
                 preview=PreviewInfoSchema(available=False),
             )
 
-        # 3. Extract comprehensive raster metadata & CRS
+        # 4. Extract comprehensive raster metadata & EarthObservationAsset descriptor
+        eo_asset_dict = None
+        try:
+            eo_asset = AssetFactory.from_file(saved_path, image_id)
+            eo_asset_dict = eo_asset.to_dict()
+        except Exception as e:
+            san_res.warnings.append(f"EOAsset descriptor extraction notice: {str(e)}")
+
         try:
             metadata = extract_raster_metadata(saved_path)
         except Exception as e:
@@ -67,18 +93,18 @@ async def inspect_image(
                 metadata=None,
                 validation=ValidationResultSchema(
                     valid=False,
-                    warnings=[],
+                    warnings=san_res.warnings,
                     errors=[f"Raster parsing failed: {str(e)}"],
                 ),
                 preview=PreviewInfoSchema(available=False),
             )
 
-        # 4. Validate extracted metadata
+        # 5. Validate extracted metadata
         raster_validation = validate_raster_metadata(metadata)
-        combined_warnings = path_validation.warnings + raster_validation.warnings
-        combined_errors = path_validation.errors + raster_validation.errors
+        combined_warnings = path_validation.warnings + raster_validation.warnings + san_res.warnings
+        combined_errors = path_validation.errors + raster_validation.errors + san_res.errors
 
-        # 5. Generate Web-compatible preview PNG
+        # 6. Generate Web-compatible preview PNG
         preview_path = storage_manager.get_preview_path(image_id)
         preview_available = False
         try:
@@ -89,7 +115,11 @@ async def inspect_image(
 
         preview_url = f"/api/v1/images/{image_id}/preview" if preview_available else None
 
-        # 6. Store metadata record in database
+        # 7. Store metadata & asset record in database
+        meta_dict = metadata.to_dict()
+        if eo_asset_dict:
+            meta_dict["asset_descriptor"] = eo_asset_dict
+
         db_image = ImageRecord(
             id=image_id,
             aoi_id=aoi_id,
@@ -110,7 +140,7 @@ async def inspect_image(
                 "y_res": metadata.resolution.y_res,
                 "units": metadata.resolution.units,
             },
-            metadata_json=metadata.to_dict(),
+            metadata_json=meta_dict,
         )
         db.add(db_image)
         db.commit()
@@ -135,6 +165,47 @@ async def inspect_image(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Internal error processing image: {str(e)}",
+        )
+
+
+@router.post("/compatibility", response_model=CompatibilityReportSchema)
+def check_images_compatibility(
+    req: CompatibilityCheckRequest,
+    db: Session = Depends(get_db),
+):
+    """Validate scientific compatibility between two EO assets (spatial overlap, CRS, resolution, modality)."""
+    img1 = db.get(ImageRecord, req.image_id_1)
+    if not img1:
+        raise HTTPException(status_code=404, detail=f"Image 1 not found: {req.image_id_1}")
+    img2 = db.get(ImageRecord, req.image_id_2)
+    if not img2:
+        raise HTTPException(status_code=404, detail=f"Image 2 not found: {req.image_id_2}")
+
+    try:
+        asset1 = AssetFactory.from_file(Path(img1.path), img1.id)
+        asset2 = AssetFactory.from_file(Path(img2.path), img2.id)
+
+        engine = CompatibilityEngine()
+        report = engine.check_compatibility(asset1, asset2, intended_task=req.intended_task or "change_detection")
+
+        return CompatibilityReportSchema(
+            compatible=report.compatible,
+            overall_score=report.overall_score,
+            spatial_overlap=report.spatial_overlap,
+            crs_compatible=report.crs_compatible,
+            crs_same=report.crs_same,
+            resolution_ratio=report.resolution_ratio,
+            resolution_compatible=report.resolution_compatible,
+            temporal_gap_days=report.temporal_gap_days,
+            modality_pair=report.modality_pair,
+            warnings=report.warnings,
+            errors=report.errors,
+            recommendations=report.recommendations,
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to check compatibility: {str(e)}",
         )
 
 
