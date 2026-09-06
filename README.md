@@ -118,24 +118,21 @@ flowchart TD
 
 ---
 
-## 📊 Benchmarks & Multimodal Ablation
+## 📊 Evaluation Status & Benchmark Harness
 
-### 1. Multi-Task Benchmark Results (`run_001`)
+### Multi-Task Evaluation Harness
 
-| Benchmark Dataset | Perception Task | Samples | Primary Metric | Result | Avg Latency |
-|---|---|---|---|---|---|
-| **RSVQA-HR / VRSBench** | Visual Question Answering | 50 | **Accuracy** | **84.6%** | 42.0 ms |
-| **RS Visual Grounding** | Coordinate Localization | 40 | **Mean IoU** | **71.8%** | 55.0 ms |
-| **CDVQA / ChangeNet** | Bi-Temporal Change Detection | 35 | **Change F1 Score** | **86.2%** | 85.0 ms |
-| **BigEarthNet.txt** | Optical + SAR Corroboration | 50 | **Cross-Modal Agreement** | **91.4%** | 62.0 ms |
+Evaluation infrastructure is implemented for all four SIH26167-mandated perception tasks. Live dataset evaluation is pending model checkpoint activation and dataset acquisition.
 
-### 2. Multimodal Ablation Study (Optical vs. SAR vs. Joint)
-
-| Modality Configuration | Water F1 | Urban F1 | All-Weather Reliability | Limitations & Failure Modes |
+| Benchmark Dataset | Perception Task | Harness | Live Evaluation | Target Dataset |
 |---|---|---|---|---|
-| **Optical Only** (Sentinel-2 RGB) | 82.4% | 78.9% | 60.5% | Cloud cover, cloud shadows, and dark asphalt cause false water alarms. |
-| **SAR Only** (Sentinel-1 C-band) | 86.1% | 84.3% | 95.0% | Smooth flat airport runways and dry salt beds mimic specular water return. |
-| **Joint Corroboration** (**SatQuery AI**) | **96.7%** | **94.2%** | **92.4%** | **$+10.6\%$ F1 gain**: Cross-modal agreement eliminates single-sensor ambiguities. |
+| **RSVQA-HR / VRSBench** | Visual Question Answering | ✅ Implemented | ⏳ Pending | RSVQA-HR test split |
+| **RS Visual Grounding** | Coordinate Localization | ✅ Implemented | ⏳ Pending | VRSBench grounding split |
+| **CDVQA / ChangeNet** | Bi-Temporal Change Detection | ✅ Implemented | ⏳ Pending | CDVQA / LEVIR-CD test |
+| **BigEarthNet** | Optical + SAR Corroboration | ✅ Implemented | ⏳ Pending | BigEarthNet-S1/S2 |
+| **Confidence Calibration** | ECE / Brier Score | ✅ Implemented | ⏳ Pending | Held-out validation set |
+
+> **Note:** Results will be reported as reproducible experiments with commit hash, seed, hardware, and saved predictions once model checkpoints are activated and datasets are prepared. No numbers are presented until they are experimentally verified.
 
 ---
 
