@@ -21,6 +21,9 @@ from .contract import (
     create_evidence_contract,
 )
 
+from .graph import EvidenceGraph, EvidenceNode, EvidenceNodeType
+from .gate import EvidenceGate, GateDecision, GateResult
+
 __all__ = [
     "ConfidenceScore",
     "compute_vqa_confidence",
@@ -38,4 +41,10 @@ __all__ = [
     "EvidenceContract",
     "ProvenanceStep",
     "create_evidence_contract",
+    "EvidenceGraph",
+    "EvidenceNode",
+    "EvidenceNodeType",
+    "EvidenceGate",
+    "GateDecision",
+    "GateResult",
 ]
