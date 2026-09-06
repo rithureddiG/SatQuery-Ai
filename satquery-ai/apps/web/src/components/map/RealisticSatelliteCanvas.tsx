@@ -33,199 +33,191 @@ export const RealisticSatelliteCanvas: React.FC<RealisticSatelliteCanvasProps> =
   const canvasSARRef = useRef<HTMLCanvasElement>(null);
   const canvasChangeRef = useRef<HTMLCanvasElement>(null);
 
-  // Generate authentic Copernicus Sentinel-2 & Sentinel-1 photo-realistic raster pixels
+  // Render high-fidelity, natural remote-sensing imagery
   useEffect(() => {
-    const width = 1000;
-    const height = 1000;
+    const width = 1200;
+    const height = 1200;
 
-    // Helper to generate realistic pseudo-random procedural terrain texture
-    const generateTexture = (
+    const renderScene = (
       ctx: CanvasRenderingContext2D,
       mode: 'T1' | 'T2' | 'NIR' | 'SAR' | 'CHANGE'
     ) => {
-      const imgData = ctx.createImageData(width, height);
-      const data = imgData.data;
+      // 1. Natural Terrain Base
+      if (mode === 'SAR') {
+        ctx.fillStyle = '#222222';
+        ctx.fillRect(0, 0, width, height);
+      } else if (mode === 'NIR') {
+        ctx.fillStyle = '#8B263E'; // High vegetative reflectance in NIR
+        ctx.fillRect(0, 0, width, height);
+      } else {
+        // Natural Sentinel-2 Earth Surface
+        ctx.fillStyle = '#3E4D38';
+        ctx.fillRect(0, 0, width, height);
+      }
 
-      // Seeded coordinate noise function for realistic landscape geology
-      const noise = (x: number, y: number) => {
-        const v = Math.sin(x * 0.015) * Math.cos(y * 0.015) +
-                  Math.sin(x * 0.035 + y * 0.02) * 0.5 +
-                  Math.sin(x * 0.08 - y * 0.06) * 0.25;
-        return (v + 1.75) / 3.5;
-      };
+      // 2. Agricultural Parcels Grid
+      const parcelColorsT1 = ['#4A5A42', '#3D4D35', '#52634A', '#45553E', '#5B6B52', '#3A4832'];
+      const parcelColorsT2 = ['#4A5A42', '#3D4D35', '#52634A', '#45553E', '#5B6B52', '#3A4832'];
+      const parcelColorsNIR = ['#A8324E', '#942B44', '#BD3C5A', '#7A2237', '#B03552'];
 
-      const highFreqNoise = (x: number, y: number) => {
-        return (Math.sin(x * 0.45 + y * 0.3) * Math.cos(x * 0.3 - y * 0.45) + 1) / 2;
-      };
+      for (let r = 0; r < 12; r++) {
+        for (let c = 0; c < 12; c++) {
+          const px = c * 100;
+          const py = r * 100;
 
-      for (let y = 0; y < height; y++) {
-        for (let x = 0; x < height; x++) {
-          const idx = (y * width + x) * 4;
-          const n = noise(x, y);
-          const hf = highFreqNoise(x, y);
+          // Skip lake area
+          if ((c >= 7 && r <= 4) || (c <= 3 && r >= 8)) continue;
+          // Skip change tech-park area for T2
+          if (mode === 'T2' && ((c >= 4 && c <= 6 && r >= 5 && r <= 7) || (c >= 7 && c <= 8 && r >= 5 && r <= 7))) continue;
 
-          // Check if in Lake / River Basin
-          const lakeDist1 = Math.hypot(x - 780, y - 280);
-          const inLake1 = lakeDist1 < 160 + Math.sin(x * 0.05) * 20;
+          ctx.fillStyle =
+            mode === 'SAR'
+              ? (c + r) % 2 === 0 ? '#383838' : '#2A2A2A'
+              : mode === 'NIR'
+              ? parcelColorsNIR[(c * 3 + r * 5) % parcelColorsNIR.length]
+              : parcelColorsT1[(c * 3 + r * 5) % parcelColorsT1.length];
 
-          const lakeDist2 = Math.hypot(x - 220, y - 880);
-          const inLake2 = lakeDist2 < 120 + Math.cos(y * 0.05) * 15;
-
-          const isWater = inLake1 || inLake2;
-
-          // Check if in Highway corridor
-          const roadDist = Math.abs(y - (480 + Math.sin(x * 0.005) * 40));
-          const isRoad = roadDist < 7;
-
-          // Check if in Alteration Cluster 01 (Tech Park)
-          const inCluster1 = x >= 400 && x <= 620 && y >= 520 && y <= 710;
-          // Check if in Alteration Cluster 02 (Highway bypass & foundation)
-          const inCluster2 = x >= 680 && x <= 890 && y >= 520 && y <= 720;
-
-          if (mode === 'SAR') {
-            // Sentinel-1 C-band Microwave SAR Backscatter
-            if (isWater) {
-              // Specular absorption (-26 dB) -> Near black with slight radar speckle
-              const speckle = (Math.random() - 0.5) * 15;
-              const val = Math.max(0, Math.min(255, 12 + speckle));
-              data[idx] = val;
-              data[idx + 1] = val;
-              data[idx + 2] = val;
-            } else if (inCluster1 || inCluster2) {
-              // High Double-Bounce Urban Backscatter (-14.5 dB) -> Bright radar return
-              const speckle = (Math.random() - 0.5) * 40;
-              const val = Math.max(0, Math.min(255, 220 + speckle));
-              data[idx] = val;
-              data[idx + 1] = val;
-              data[idx + 2] = val;
-            } else if (isRoad) {
-              const val = 45 + Math.random() * 20;
-              data[idx] = val;
-              data[idx + 1] = val;
-              data[idx + 2] = val;
-            } else {
-              // Moderate Soil / Canopy Speckle (-18 dB)
-              const speckle = (Math.random() - 0.5) * 60;
-              const val = Math.max(0, Math.min(255, 95 * n + speckle));
-              data[idx] = val;
-              data[idx + 1] = val;
-              data[idx + 2] = val;
-            }
-            data[idx + 3] = 255;
-          } else if (mode === 'NIR') {
-            // False Color NIR (B8 NIR = Red, B4 Red = Green, B3 Green = Blue)
-            if (isWater) {
-              data[idx] = 6;
-              data[idx + 1] = 12;
-              data[idx + 2] = 18;
-            } else if (isRoad) {
-              data[idx] = 40;
-              data[idx + 1] = 60;
-              data[idx + 2] = 65;
-            } else if (inCluster1 || inCluster2) {
-              // Cyan built-up reflection
-              data[idx] = 110 + hf * 30;
-              data[idx + 1] = 155 + hf * 30;
-              data[idx + 2] = 168 + hf * 30;
-            } else {
-              // High Chlorophyll Reflectance in Red/Magenta
-              data[idx] = 160 + n * 70 + hf * 20;
-              data[idx + 1] = 30 + n * 20;
-              data[idx + 2] = 45 + n * 30;
-            }
-            data[idx + 3] = 255;
-          } else if (mode === 'T1') {
-            // Optical True Color RGB (2024 Baseline Scene)
-            if (isWater) {
-              data[idx] = 22 + n * 10;
-              data[idx + 1] = 42 + n * 15;
-              data[idx + 2] = 52 + n * 20;
-            } else if (isRoad) {
-              data[idx] = 55 + hf * 15;
-              data[idx + 1] = 52 + hf * 15;
-              data[idx + 2] = 48 + hf * 15;
-            } else if (inCluster1 || inCluster2) {
-              // Agricultural vegetation parcels before development in 2024
-              data[idx] = 78 + n * 30 + hf * 20;
-              data[idx + 1] = 105 + n * 35 + hf * 25;
-              data[idx + 2] = 65 + n * 20 + hf * 15;
-            } else {
-              // Standard peri-urban terrain
-              data[idx] = 72 + n * 40 + hf * 15;
-              data[idx + 1] = 94 + n * 45 + hf * 20;
-              data[idx + 2] = 58 + n * 30 + hf * 10;
-            }
-            data[idx + 3] = 255;
-          } else if (mode === 'T2') {
-            // Optical True Color RGB (2026 Post-Expansion Scene)
-            if (isWater) {
-              data[idx] = 20 + n * 10;
-              data[idx + 1] = 38 + n * 15;
-              data[idx + 2] = 48 + n * 20;
-            } else if (isRoad) {
-              data[idx] = 52 + hf * 15;
-              data[idx + 1] = 50 + hf * 15;
-              data[idx + 2] = 46 + hf * 15;
-            } else if (inCluster1 || inCluster2) {
-              // Real Concrete Foundations / Tech Park Roofs / Graded Earth in 2026
-              const roofTile = Math.floor(x / 25) % 2 === Math.floor(y / 25) % 2;
-              if (roofTile) {
-                data[idx] = 210 + hf * 25;
-                data[idx + 1] = 204 + hf * 25;
-                data[idx + 2] = 196 + hf * 25;
-              } else {
-                data[idx] = 175 + hf * 30;
-                data[idx + 1] = 168 + hf * 30;
-                data[idx + 2] = 158 + hf * 30;
-              }
-            } else {
-              data[idx] = 72 + n * 40 + hf * 15;
-              data[idx + 1] = 94 + n * 45 + hf * 20;
-              data[idx + 2] = 58 + n * 30 + hf * 10;
-            }
-            data[idx + 3] = 255;
-          } else if (mode === 'CHANGE') {
-            // ChangeNet Continuous Sigmoid Probability Heatmap
-            if (inCluster1 || inCluster2) {
-              const cx = inCluster1 ? 510 : 785;
-              const cy = inCluster1 ? 615 : 620;
-              const dist = Math.hypot(x - cx, y - cy);
-              const prob = Math.max(0, 1 - dist / 140);
-              data[idx] = 239;
-              data[idx + 1] = Math.round(68 * (1 - prob) + 120 * prob);
-              data[idx + 2] = 68;
-              data[idx + 3] = Math.round(prob * 220);
-            } else {
-              data[idx] = 0;
-              data[idx + 1] = 0;
-              data[idx + 2] = 0;
-              data[idx + 3] = 0;
-            }
-          }
+          ctx.fillRect(px + 3, py + 3, 94, 94);
         }
       }
-      ctx.putImageData(imgData, 0, 0);
+
+      // 3. Natural Lake / Water Reservoir (Sabarmati Basin)
+      ctx.beginPath();
+      ctx.moveTo(750, 80);
+      ctx.bezierCurveTo(900, 40, 1100, 120, 1150, 320);
+      ctx.bezierCurveTo(1180, 480, 1040, 560, 920, 500);
+      ctx.bezierCurveTo(800, 440, 740, 320, 720, 200);
+      ctx.closePath();
+
+      if (mode === 'SAR') {
+        ctx.fillStyle = '#080808'; // Specular microwave absorption
+      } else if (mode === 'NIR') {
+        ctx.fillStyle = '#060A0D'; // Complete NIR water absorption
+      } else {
+        const waterGrad = ctx.createRadialGradient(950, 280, 40, 950, 280, 260);
+        waterGrad.addColorStop(0, '#10242B');
+        waterGrad.addColorStop(1, '#1A333D');
+        ctx.fillStyle = waterGrad;
+      }
+      ctx.fill();
+
+      // Southwest lake
+      ctx.beginPath();
+      ctx.arc(200, 980, 140, 0, Math.PI * 2);
+      ctx.fillStyle = mode === 'SAR' ? '#080808' : mode === 'NIR' ? '#060A0D' : '#142830';
+      ctx.fill();
+
+      // 4. Highway Transportation Corridor
+      ctx.beginPath();
+      ctx.moveTo(0, 520);
+      ctx.bezierCurveTo(350, 560, 750, 480, 1200, 470);
+      ctx.lineWidth = 14;
+      ctx.strokeStyle = mode === 'SAR' ? '#555555' : mode === 'NIR' ? '#33444A' : '#262523';
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(520, 0);
+      ctx.lineTo(540, 1200);
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = mode === 'SAR' ? '#444444' : mode === 'NIR' ? '#33444A' : '#3D3B37';
+      ctx.stroke();
+
+      // 5. Baseline Settlements (Pre-existing in both T1 and T2)
+      const renderSettlement = (bx: number, by: number, bw: number, bh: number) => {
+        ctx.fillStyle = mode === 'SAR' ? '#777777' : mode === 'NIR' ? '#5C7D85' : '#6E685E';
+        ctx.fillRect(bx, by, bw, bh);
+      };
+      renderSettlement(180, 220, 180, 160);
+      renderSettlement(780, 680, 200, 160);
+      renderSettlement(540, 360, 140, 100);
+
+      // 6. Post-Expansion Built-Up Clusters (T2, SAR, NIR, CHANGE only)
+      if (mode === 'T2' || mode === 'SAR' || mode === 'NIR' || mode === 'CHANGE') {
+        // Cluster 01: Tech Park Complex (1.82 ha)
+        const c1X = 420;
+        const c1Y = 560;
+        const c1W = 220;
+        const c1H = 190;
+
+        if (mode === 'SAR') {
+          // Intense Double-Bounce Radar Backscatter (-14.5 dB)
+          ctx.fillStyle = '#F0F0F0';
+          ctx.fillRect(c1X, c1Y, c1W, c1H);
+        } else if (mode === 'NIR') {
+          ctx.fillStyle = '#6E9BA6'; // Cyan built-up
+          ctx.fillRect(c1X, c1Y, c1W, c1H);
+        } else if (mode === 'T2') {
+          // Modern White/Grey Clean Industrial Roofs
+          ctx.fillStyle = '#C8C2B8';
+          ctx.fillRect(c1X, c1Y, c1W, c1H);
+          ctx.fillStyle = '#EBE6DE';
+          ctx.fillRect(c1X + 15, c1Y + 15, 85, 75);
+          ctx.fillRect(c1X + 115, c1Y + 15, 85, 75);
+          ctx.fillRect(c1X + 15, c1Y + 105, 185, 70);
+        }
+
+        // Cluster 02: Highway Earthwork & Logistics Depot (0.74 ha)
+        const c2X = 690;
+        const c2Y = 550;
+        const c2W = 200;
+        const c2H = 190;
+
+        if (mode === 'SAR') {
+          ctx.fillStyle = '#E8E8E8';
+          ctx.fillRect(c2X, c2Y, c2W, c2H);
+        } else if (mode === 'NIR') {
+          ctx.fillStyle = '#6E9BA6';
+          ctx.fillRect(c2X, c2Y, c2W, c2H);
+        } else if (mode === 'T2') {
+          ctx.fillStyle = '#C8C2B8';
+          ctx.fillRect(c2X, c2Y, c2W, c2H);
+          ctx.fillStyle = '#E0DAD0';
+          ctx.fillRect(c2X + 15, c2Y + 15, 170, 75);
+          ctx.fillRect(c2X + 15, c2Y + 105, 170, 70);
+        }
+
+        // Continuous Sigmoid Heatmap Overlay for CHANGE lens
+        if (mode === 'CHANGE') {
+          const heat1 = ctx.createRadialGradient(c1X + 110, c1Y + 95, 20, c1X + 110, c1Y + 95, 130);
+          heat1.addColorStop(0, 'rgba(239, 68, 68, 0.85)');
+          heat1.addColorStop(0.7, 'rgba(249, 115, 22, 0.50)');
+          heat1.addColorStop(1, 'rgba(239, 68, 68, 0.0)');
+          ctx.fillStyle = heat1;
+          ctx.beginPath();
+          ctx.arc(c1X + 110, c1Y + 95, 130, 0, Math.PI * 2);
+          ctx.fill();
+
+          const heat2 = ctx.createRadialGradient(c2X + 100, c2Y + 95, 20, c2X + 100, c2Y + 95, 130);
+          heat2.addColorStop(0, 'rgba(239, 68, 68, 0.85)');
+          heat2.addColorStop(0.7, 'rgba(249, 115, 22, 0.50)');
+          heat2.addColorStop(1, 'rgba(239, 68, 68, 0.0)');
+          ctx.fillStyle = heat2;
+          ctx.beginPath();
+          ctx.arc(c2X + 100, c2Y + 95, 130, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
     };
 
     if (canvasT1Ref.current) {
       const ctx = canvasT1Ref.current.getContext('2d');
-      if (ctx) generateTexture(ctx, 'T1');
+      if (ctx) renderScene(ctx, 'T1');
     }
     if (canvasT2Ref.current) {
       const ctx = canvasT2Ref.current.getContext('2d');
-      if (ctx) generateTexture(ctx, 'T2');
+      if (ctx) renderScene(ctx, 'T2');
     }
     if (canvasNIRRef.current) {
       const ctx = canvasNIRRef.current.getContext('2d');
-      if (ctx) generateTexture(ctx, 'NIR');
+      if (ctx) renderScene(ctx, 'NIR');
     }
     if (canvasSARRef.current) {
       const ctx = canvasSARRef.current.getContext('2d');
-      if (ctx) generateTexture(ctx, 'SAR');
+      if (ctx) renderScene(ctx, 'SAR');
     }
     if (canvasChangeRef.current) {
       const ctx = canvasChangeRef.current.getContext('2d');
-      if (ctx) generateTexture(ctx, 'CHANGE');
+      if (ctx) renderScene(ctx, 'CHANGE');
     }
   }, []);
 
@@ -234,14 +226,14 @@ export const RealisticSatelliteCanvas: React.FC<RealisticSatelliteCanvasProps> =
 
   return (
     <div className="relative w-full h-full select-none overflow-hidden flex items-center justify-center bg-[#0A0A0A]">
-      {/* 1. Temporal Swipe Mode: Smooth Before (2024) ↔ After (2026) Comparison */}
+      {/* 1. Temporal Swipe Mode: Before (2024) ↔ After (2026) Comparison */}
       {temporalMode === 'Swipe' && (activeLens === 'CHANGE' || activeLens === 'True Color') ? (
         <div className="relative w-full h-full overflow-hidden">
           {/* Base Layer: T2 (2026) */}
           <canvas
             ref={canvasT2Ref}
-            width={1000}
-            height={1000}
+            width={1200}
+            height={1200}
             className="absolute inset-0 w-full h-full object-cover"
           />
 
@@ -249,8 +241,8 @@ export const RealisticSatelliteCanvas: React.FC<RealisticSatelliteCanvasProps> =
           {activeLens === 'CHANGE' && (
             <canvas
               ref={canvasChangeRef}
-              width={1000}
-              height={1000}
+              width={1200}
+              height={1200}
               className="absolute inset-0 w-full h-full object-cover pointer-events-none z-5"
             />
           )}
@@ -266,8 +258,8 @@ export const RealisticSatelliteCanvas: React.FC<RealisticSatelliteCanvasProps> =
             >
               <canvas
                 ref={canvasT1Ref}
-                width={1000}
-                height={1000}
+                width={1200}
+                height={1200}
                 className="w-full h-full object-cover"
               />
             </div>
@@ -289,8 +281,8 @@ export const RealisticSatelliteCanvas: React.FC<RealisticSatelliteCanvasProps> =
           <div className="relative w-full h-full overflow-hidden">
             <canvas
               ref={canvasT1Ref}
-              width={1000}
-              height={1000}
+              width={1200}
+              height={1200}
               className="w-full h-full object-cover"
             />
             <div className="absolute top-16 left-4 bg-black/80 backdrop-blur-md text-white px-2.5 py-1 rounded-md text-[10px] font-mono font-bold border border-white/20">
@@ -300,8 +292,8 @@ export const RealisticSatelliteCanvas: React.FC<RealisticSatelliteCanvasProps> =
           <div className="relative w-full h-full overflow-hidden">
             <canvas
               ref={canvasT2Ref}
-              width={1000}
-              height={1000}
+              width={1200}
+              height={1200}
               className="w-full h-full object-cover"
             />
             <div className="absolute top-16 left-4 bg-black/80 backdrop-blur-md text-white px-2.5 py-1 rounded-md text-[10px] font-mono font-bold border border-white/20">
@@ -313,16 +305,16 @@ export const RealisticSatelliteCanvas: React.FC<RealisticSatelliteCanvasProps> =
         /* 3. False Color NIR Multispectral */
         <canvas
           ref={canvasNIRRef}
-          width={1000}
-          height={1000}
+          width={1200}
+          height={1200}
           className="w-full h-full object-cover"
         />
       ) : isSARActive ? (
         /* 4. Sentinel-1 SAR C-band Radar Backscatter */
         <canvas
           ref={canvasSARRef}
-          width={1000}
-          height={1000}
+          width={1200}
+          height={1200}
           className="w-full h-full object-cover"
         />
       ) : activeLens === 'CHANGE' ? (
@@ -330,14 +322,14 @@ export const RealisticSatelliteCanvas: React.FC<RealisticSatelliteCanvasProps> =
         <div className="relative w-full h-full">
           <canvas
             ref={canvasT2Ref}
-            width={1000}
-            height={1000}
+            width={1200}
+            height={1200}
             className="w-full h-full object-cover"
           />
           <canvas
             ref={canvasChangeRef}
-            width={1000}
-            height={1000}
+            width={1200}
+            height={1200}
             className="absolute inset-0 w-full h-full object-cover pointer-events-none"
           />
         </div>
@@ -345,83 +337,85 @@ export const RealisticSatelliteCanvas: React.FC<RealisticSatelliteCanvasProps> =
         /* 6. Single Optical T1 */
         <canvas
           ref={canvasT1Ref}
-          width={1000}
-          height={1000}
+          width={1200}
+          height={1200}
           className="w-full h-full object-cover"
         />
       ) : (
         /* 7. Single Optical T2 */
         <canvas
           ref={canvasT2Ref}
-          width={1000}
-          height={1000}
+          width={1200}
+          height={1200}
           className="w-full h-full object-cover"
         />
       )}
 
       {/* Vector Polygons & Spatial Annotations */}
-      <svg
-        className="absolute inset-0 w-full h-full pointer-events-none z-20"
-        viewBox="0 0 1000 1000"
-        preserveAspectRatio="none"
-      >
-        {clusters.map((cluster) => {
-          const x = cluster.bbox.xmin * 1000;
-          const y = cluster.bbox.ymin * 1000;
-          const w = (cluster.bbox.xmax - cluster.bbox.xmin) * 1000;
-          const h = (cluster.bbox.ymax - cluster.bbox.ymin) * 1000;
-          const isSelected = selectedClusterId === cluster.id;
+      {activeLens === 'CHANGE' && (
+        <svg
+          className="absolute inset-0 w-full h-full pointer-events-none z-20"
+          viewBox="0 0 1200 1200"
+          preserveAspectRatio="none"
+        >
+          {clusters.map((cluster) => {
+            const x = cluster.bbox.xmin * 1200;
+            const y = cluster.bbox.ymin * 1200;
+            const w = (cluster.bbox.xmax - cluster.bbox.xmin) * 1200;
+            const h = (cluster.bbox.ymax - cluster.bbox.ymin) * 1200;
+            const isSelected = selectedClusterId === cluster.id;
 
-          return (
-            <g
-              key={cluster.id}
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelectCluster(isSelected ? null : cluster.id);
-              }}
-              className="pointer-events-auto cursor-pointer group"
-            >
-              {/* Change Region Outline */}
-              <rect
-                x={x}
-                y={y}
-                width={w}
-                height={h}
-                fill={isSelected ? 'rgba(239, 68, 68, 0.40)' : 'rgba(239, 68, 68, 0.20)'}
-                stroke="#EF4444"
-                strokeWidth={isSelected ? '3.5' : '2'}
-                strokeDasharray="6 4"
-                className="transition-all duration-200"
-              />
-
-              {/* Annotation Tag: 01 · +1.82 ha */}
-              <g transform={`translate(${x}, ${y - 8})`}>
+            return (
+              <g
+                key={cluster.id}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelectCluster(isSelected ? null : cluster.id);
+                }}
+                className="pointer-events-auto cursor-pointer group"
+              >
+                {/* Change Region Outline */}
                 <rect
-                  x="0"
-                  y="-18"
-                  width={cluster.area_ha ? 110 : 80}
-                  height="22"
-                  rx="5"
-                  fill="#111111"
+                  x={x}
+                  y={y}
+                  width={w}
+                  height={h}
+                  fill={isSelected ? 'rgba(239, 68, 68, 0.35)' : 'rgba(239, 68, 68, 0.18)'}
                   stroke="#EF4444"
-                  strokeWidth="1.5"
-                  className="drop-shadow-lg"
+                  strokeWidth={isSelected ? '3' : '2'}
+                  strokeDasharray="6 4"
+                  className="transition-all duration-200"
                 />
-                <text
-                  x="8"
-                  y="-4"
-                  fill="#FFFFFF"
-                  fontSize="11"
-                  fontFamily="ui-monospace, monospace"
-                  fontWeight="bold"
-                >
-                  {cluster.tag} · +{cluster.area_ha} ha
-                </text>
+
+                {/* Annotation Tag: 01 · +1.82 ha */}
+                <g transform={`translate(${x}, ${y - 8})`}>
+                  <rect
+                    x="0"
+                    y="-18"
+                    width={cluster.area_ha ? 115 : 85}
+                    height="22"
+                    rx="5"
+                    fill="#111111"
+                    stroke="#EF4444"
+                    strokeWidth="1.5"
+                    className="drop-shadow-md"
+                  />
+                  <text
+                    x="8"
+                    y="-4"
+                    fill="#FFFFFF"
+                    fontSize="11"
+                    fontFamily="ui-monospace, monospace"
+                    fontWeight="bold"
+                  >
+                    {cluster.tag} · +{cluster.area_ha} ha
+                  </text>
+                </g>
               </g>
-            </g>
-          );
-        })}
-      </svg>
+            );
+          })}
+        </svg>
+      )}
     </div>
   );
 };

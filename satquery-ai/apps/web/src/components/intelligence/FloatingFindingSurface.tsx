@@ -42,7 +42,7 @@ export const FloatingFindingSurface: React.FC<FloatingFindingSurfaceProps> = ({
   }
 
   return (
-    <div className="absolute bottom-6 right-6 z-30 w-84 bg-white/95 backdrop-blur-md border border-[#E6E6E1] rounded-2xl shadow-2xl p-5 space-y-4 animate-in fade-in slide-in-from-bottom-3 duration-400 select-none">
+    <div className="absolute bottom-6 right-6 z-30 w-84 bg-white/95 backdrop-blur-md border border-[#E6E6E1] rounded-2xl shadow-2xl p-5 space-y-3.5 animate-in fade-in slide-in-from-bottom-3 duration-400 select-none">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-[#F0EFEA] pb-2.5">
         <div className="flex items-center gap-2">
@@ -65,29 +65,29 @@ export const FloatingFindingSurface: React.FC<FloatingFindingSurfaceProps> = ({
         </div>
       </div>
 
-      {/* Finding Title & Concise Editorial Explanation */}
-      <div className="space-y-1.5">
-        <h3 className="text-base font-bold text-[#111111] tracking-tight uppercase leading-tight">
+      {/* Dynamic Headline & Concise Explanation */}
+      <div className="space-y-1">
+        <h3 className="text-sm font-bold text-[#111111] tracking-tight uppercase leading-tight">
           {ws.findingTitle}
         </h3>
-        <p className="text-xs text-[#555555] leading-relaxed line-clamp-3">
+        <p className="text-xs text-[#555555] leading-relaxed line-clamp-3 font-sans">
           {ws.synthesizedInsight}
         </p>
       </div>
 
-      {/* Instrumentation Metric Display */}
+      {/* Clean Instrumentation Metric Display */}
       <div className="p-3.5 rounded-xl bg-[#FAF9F7] border border-[#E6E6E1] flex items-baseline justify-between font-mono">
         <div>
           <span className="text-[9px] text-[#888888] uppercase block">ANALYZED METRIC</span>
           <span className="text-2xl font-bold text-[#111111] tracking-tight">{ws.totalAreaHa}</span>
         </div>
         <div className="text-right">
-          <span className="text-[9px] text-[#888888] uppercase block">SURFACE AREA</span>
+          <span className="text-[9px] text-[#888888] uppercase block">SURFACE M²</span>
           <span className="text-xs font-semibold text-[#555555]">{ws.totalAreaM2}</span>
         </div>
       </div>
 
-      {/* Corroboration Stack Summary */}
+      {/* Corroboration Stack */}
       <div className="space-y-1.5 pt-0.5">
         <div className="grid grid-cols-2 gap-1.5 text-[10px] font-mono">
           <div className="flex items-center gap-1 p-1.5 rounded-lg bg-[#FAF9F7] border border-[#E6E6E1] text-[#333333]">
