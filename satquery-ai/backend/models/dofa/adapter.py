@@ -166,18 +166,43 @@ class DOFAAdapter:
         opt_feats = self.extract_optical_features(optical_path)
         sar_feats = self.extract_sar_features(sar_path)
 
-        # 1. Compute Cross-Modal Corroboration Agreement
+        # 1. Compute Spatial Cross-Modal Corroboration
         opt_water = opt_feats["water_fraction_proxy"]
         sar_water = sar_feats["low_backscatter_fraction"]
 
-        diff = abs(opt_water - sar_water)
-        corroboration_score = round(max(0.60, min(0.98, 1.0 - diff * 2.0)), 2)
+        # If spatial arrays are available from rasterio, compute true spatial fusion
+        spatial_iou = None
+        spatial_agreement_ratio = None
+        try:
+            from ...engines.fusion import SpatialFusionEngine
+            fusion_engine = SpatialFusionEngine()
+            if HAS_RASTERIO and Path(optical_path).suffix.lower() in [".tif", ".tiff"] and Path(sar_path).suffix.lower() in [".tif", ".tiff"]:
+                with rasterio.open(optical_path) as opt_ds, rasterio.open(sar_path) as sar_ds:
+                    if opt_ds.shape == sar_ds.shape:
+                        b = opt_ds.read(3 if opt_ds.count >= 3 else 1).astype(np.float32)
+                        r = opt_ds.read(1).astype(np.float32)
+                        opt_m = (b > (r + 15))
+                        sar_m = (sar_ds.read(1).astype(np.float32) < -20.0)
+                        f_res = fusion_engine.fuse_binary_detections(opt_m, sar_m, task_name="water_body_detection")
+                        corroboration_score = round(f_res.mean_fused_confidence, 2)
+                        spatial_iou = f_res.iou
+                        spatial_agreement_ratio = f_res.spatial_agreement_ratio
+                    else:
+                        diff = abs(opt_water - sar_water)
+                        corroboration_score = round(max(0.60, min(0.98, 1.0 - diff * 2.0)), 2)
+            else:
+                diff = abs(opt_water - sar_water)
+                corroboration_score = round(max(0.60, min(0.98, 1.0 - diff * 2.0)), 2)
+        except Exception:
+            diff = abs(opt_water - sar_water)
+            corroboration_score = round(max(0.60, min(0.98, 1.0 - diff * 2.0)), 2)
 
         # 2. Joint Interpretation
         joint_findings = []
         if opt_water > 0.05 and sar_water > 0.05:
             joint_findings.append(
-                f"Both Optical reflectance and SAR radar backscatter strongly corroborate open water ({round(opt_water * 100, 1)}% optical coverage, {sar_feats['mean_sigma0_db']} dB average radar backscatter)."
+                f"Both Optical reflectance and SAR radar backscatter corroborate surface features "
+                f"({round(opt_water * 100, 1)}% optical coverage, {sar_feats['mean_sigma0_db']} dB average radar backscatter)."
             )
         else:
             joint_findings.append(
@@ -186,15 +211,17 @@ class DOFAAdapter:
 
         return {
             "corroboration_score": corroboration_score,
+            "spatial_iou": spatial_iou,
+            "spatial_agreement_ratio": spatial_agreement_ratio,
             "joint_claim": " ".join(joint_findings),
             "optical_features": opt_feats,
             "sar_features": sar_feats,
-            "model_name": "DOFA Foundation Specialist",
+            "model_name": "DOFA Foundation Specialist / Spatial Fusion",
             "model_version": "v1.0-ViT-Base",
             "weights_available": self.is_checkpoint_available(),
             "is_real_weights": self.is_checkpoint_available(),
             "fallback_used": not self.is_checkpoint_available(),
-            "execution_mode": "deterministic_corroboration",
+            "execution_mode": "spatial_corroboration",
             "device": self._device,
             "quantization": "FP16",
             "checkpoint_path": str(self.config.checkpoint_dir),
