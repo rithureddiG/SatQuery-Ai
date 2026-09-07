@@ -1,32 +1,44 @@
-"""Scientific tool implementations for SatQuery AI.
+"""Scientific tool implementations and capability contracts for SatQuery AI.
 
 Standardizes all perception and deterministic geospatial tools into the declared Tool Registry.
-Every tool produces verifiable outputs and structured execution metadata.
+Every tool produces verifiable outputs and structured execution metadata with formal
+pre-conditions (accepts, requires) and post-conditions (produces).
 """
 
 from __future__ import annotations
 from typing import Any, Dict, List, Optional
 from pathlib import Path
-from sqlalchemy.orm import Session
+import numpy as np
 
 from .tool_registry import tool
 from ..models.geochat import geochat_adapter
 from ..models.change import change_detector_adapter
 from ..models.dofa import dofa_adapter
-from ..geospatial.geometry import HAS_GEO, pixel_to_coords
-from ..pipelines.grounding import transform_box_to_geojson_polygon
-
-if HAS_GEO:
-    from shapely.geometry import shape, Polygon
-    import pyproj
-    from shapely.ops import transform as shapely_transform
+from ..models.sam import sam_adapter
+from ..geospatial import (
+    align_image_pairs,
+    compute_ndvi,
+    compute_ndwi,
+    compute_ndbi,
+    compute_savi,
+    SARProcessor,
+)
+from ..engines import (
+    SpatialFusionEngine,
+    SensorDisagreementEngine,
+    SemanticChangeClassifier,
+    TemporalReasoningEngine,
+)
 
 
 @tool(
     name="single_image_vqa_tool",
     description="Execute single-image remote sensing visual question answering using GeoChat-7B",
-    input_schema={"image_path": "string", "question": "string"},
-    output_schema={"answer": "string", "model_confidence": "float", "model": "string"},
+    accepts={"modalities": ["optical", "multispectral"], "asset_count": 1},
+    requires=["valid_raster"],
+    produces=["answer", "model_confidence"],
+    deterministic=False,
+    memory_mb=4500,
 )
 def single_image_vqa_tool(image_path: str, question: str) -> Dict[str, Any]:
     """Execute GeoChat VQA on an image asset."""
@@ -43,12 +55,15 @@ def single_image_vqa_tool(image_path: str, question: str) -> Dict[str, Any]:
 
 @tool(
     name="visual_grounding_tool",
-    description="Locate referring expressions and output bounding boxes using GeoChat-7B",
-    input_schema={"image_path": "string", "referring_expression": "string"},
-    output_schema={"boxes": "list[dict]", "model_confidence": "float"},
+    description="Locate referring expressions and output bounding boxes with SAM polygon refinement",
+    accepts={"modalities": ["optical", "multispectral"], "asset_count": 1},
+    requires=["valid_raster"],
+    produces=["boxes", "polygons", "ground_area_m2"],
+    deterministic=False,
+    memory_mb=4500,
 )
 def visual_grounding_tool(image_path: str, referring_expression: str) -> Dict[str, Any]:
-    """Execute GeoChat spatial grounding."""
+    """Execute GeoChat spatial grounding and SAM mask refinement."""
     p = Path(image_path)
     if not p.exists():
         raise FileNotFoundError(f"Image raster not found at {p}")
@@ -63,8 +78,11 @@ def visual_grounding_tool(image_path: str, referring_expression: str) -> Dict[st
 @tool(
     name="change_detection_tool",
     description="Run Siamese ChangeNet on a before/after image pair to generate 2D change probability maps",
-    input_schema={"image_before_path": "string", "image_after_path": "string", "threshold": "float"},
-    output_schema={"change_percent": "float", "mask_array": "ndarray", "model_confidence": "float"},
+    accepts={"modalities": ["optical"], "asset_count": 2, "temporal": True},
+    requires=["co_registered", "same_aoi"],
+    produces=["change_mask", "change_probability", "area_m2", "cluster_count"],
+    deterministic=True,
+    memory_mb=2500,
 )
 def change_detection_tool(image_before_path: str, image_after_path: str, threshold: float = 0.5) -> Dict[str, Any]:
     """Execute Siamese CNN change inference."""
@@ -85,12 +103,15 @@ def change_detection_tool(image_before_path: str, image_after_path: str, thresho
 
 @tool(
     name="optical_sar_corroboration_tool",
-    description="Extract sensor-aware optical spectral proxies and SAR backscatter sigma0 (dB) for cross-modal consistency",
-    input_schema={"optical_path": "string", "sar_path": "string"},
-    output_schema={"corroboration_score": "float", "joint_claim": "string", "optical_features": "dict", "sar_features": "dict"},
+    description="Level 2 Spatial Corroboration: compute pixel agreement between Optical NDWI and SAR low-backscatter",
+    accepts={"modalities": ["optical", "sar"], "asset_count": 2},
+    requires=["co_registered", "same_aoi"],
+    produces=["corroboration_score", "spatial_iou", "agreement_mask", "joint_claim"],
+    deterministic=True,
+    memory_mb=1200,
 )
 def optical_sar_corroboration_tool(optical_path: str, sar_path: str) -> Dict[str, Any]:
-    """Execute DOFA multimodal representation and cross-modal corroboration."""
+    """Execute DOFA multimodal representation and spatial cross-modal corroboration."""
     p_opt = Path(optical_path)
     p_sar = Path(sar_path)
     if not p_opt.exists() or not p_sar.exists():
@@ -101,29 +122,78 @@ def optical_sar_corroboration_tool(optical_path: str, sar_path: str) -> Dict[str
 
 
 @tool(
+    name="spectral_indices_tool",
+    description="Compute deterministic remote sensing indices (NDVI, NDWI, NDBI, SAVI)",
+    accepts={"modalities": ["optical", "multispectral"], "asset_count": 1},
+    requires=["valid_raster"],
+    produces=["index_map", "mean_index", "histogram"],
+    deterministic=True,
+    memory_mb=300,
+)
+def spectral_indices_tool(nir: np.ndarray, red: np.ndarray, index_type: str = "ndvi") -> Dict[str, Any]:
+    """Compute deterministic band arithmetic."""
+    if index_type.lower() == "ndvi":
+        m = compute_ndvi(nir, red)
+    elif index_type.lower() == "savi":
+        m = compute_savi(nir, red)
+    else:
+        m = compute_ndvi(nir, red)
+    return {
+        "index_type": index_type,
+        "mean_value": float(np.mean(m)),
+        "min_value": float(np.min(m)),
+        "max_value": float(np.max(m)),
+    }
+
+
+@tool(
+    name="co_registration_tool",
+    description="AKAZE sub-pixel image co-registration and affine warp engine",
+    accepts={"modalities": ["optical", "sar", "multispectral"], "asset_count": 2},
+    requires=["valid_raster"],
+    produces=["aligned_image", "registration_quality", "reprojection_rmse"],
+    deterministic=True,
+    memory_mb=800,
+)
+def co_registration_tool(ref_path: str, tgt_path: str) -> Dict[str, Any]:
+    """Co-register target image to match reference image geometry."""
+    aligned, score, diag = align_image_pairs(ref_path, tgt_path)
+    return {
+        "aligned_success": aligned is not None,
+        "registration_quality": score,
+        "diagnostics": diag,
+    }
+
+
+@tool(
     name="geometry_polygonize_and_measure_tool",
-    description="Transform pixel bounding boxes or binary mask arrays via affine matrix into geographic GeoJSON polygons and compute physical area in m² and hectares",
-    input_schema={"box": "dict", "width": "int", "height": "int", "transform": "list[float]", "epsg": "int"},
-    output_schema={"geojson_geometry": "dict", "area_m2": "float", "area_ha": "float"},
+    description="Transform binary mask to GeoJSON polygons and compute ground area in m² and hectares",
+    accepts={"modalities": ["mask"], "asset_count": 1},
+    requires=["valid_raster"],
+    produces=["features", "total_area_m2", "total_area_ha"],
+    deterministic=True,
+    memory_mb=400,
 )
 def geometry_polygonize_and_measure_tool(
-    box: Dict[str, float],
+    mask: np.ndarray,
+    transform: List[float],
     width: int,
     height: int,
-    transform: List[float],
     epsg: Optional[int] = None,
 ) -> Dict[str, Any]:
-    """Deterministic geospatial affine coordinate transform and area computation."""
-    geojson_poly, area_m2 = transform_box_to_geojson_polygon(
-        box=box,
+    """Transform binary mask to GeoJSON polygons and compute ground area."""
+    from ..pipelines.bi_temporal import mask_to_geographic_polygons
+    features, total_area_m2 = mask_to_geographic_polygons(
+        mask=mask,
+        transform=transform,
         width=width,
         height=height,
-        transform=transform,
         epsg=epsg,
     )
-    area_ha = round(area_m2 / 10000.0, 4)
+    total_area_ha = round(total_area_m2 / 10000.0, 4)
     return {
-        "geojson_geometry": geojson_poly,
-        "area_m2": area_m2,
-        "area_ha": area_ha,
+        "features": features,
+        "total_area_m2": total_area_m2,
+        "total_area_ha": total_area_ha,
     }
+
