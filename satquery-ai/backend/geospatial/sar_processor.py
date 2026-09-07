@@ -16,7 +16,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -231,35 +231,34 @@ def lee_filter_fast(
     noise_var = local_var / max(1.0, enl)
 
     # Weighting factor
-    k = np.where(local_var > 0, np.maximum(0, (local_var - noise_var) / local_var), 0.0)
+    safe_var = np.maximum(1e-10, local_var)
+    k = np.where(local_var > 0, np.maximum(0.0, (local_var - noise_var) / safe_var), 0.0)
 
     result = local_mean + k * (img - local_mean)
     return result.astype(np.float32)
 
 
 def _box_filter(image: np.ndarray, window_size: int) -> np.ndarray:
-    """Simple box filter using cumulative sum (no scipy dependency)."""
+    """Vectorized box filter using summed area table (integral image) with no scipy dependency."""
     half = window_size // 2
-    padded = np.pad(image, half, mode="reflect")
-    # Integral image approach
-    cumsum = np.cumsum(np.cumsum(padded, axis=0), axis=1)
+    padded = np.pad(image.astype(np.float64), half, mode="reflect")
+    h_pad, w_pad = padded.shape
+    sat = np.zeros((h_pad + 1, w_pad + 1), dtype=np.float64)
+    sat[1:, 1:] = np.cumsum(np.cumsum(padded, axis=0), axis=1)
+
     rows, cols = image.shape
-    result = np.zeros_like(image)
+    r1 = np.arange(rows)
+    r2 = r1 + window_size
+    c1 = np.arange(cols)
+    c2 = c1 + window_size
 
-    for i in range(rows):
-        for j in range(cols):
-            r1, c1 = i, j
-            r2, c2 = i + window_size, j + window_size
-            total = cumsum[r2, c2]
-            if r1 > 0:
-                total -= cumsum[r1, c2]
-            if c1 > 0:
-                total -= cumsum[r2, c1]
-            if r1 > 0 and c1 > 0:
-                total += cumsum[r1, c1]
-            result[i, j] = total / (window_size * window_size)
-
-    return result
+    total = (
+        sat[np.ix_(r2, c2)]
+        - sat[np.ix_(r1, c2)]
+        - sat[np.ix_(r2, c1)]
+        + sat[np.ix_(r1, c1)]
+    )
+    return (total / (window_size * window_size)).astype(np.float32)
 
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -432,3 +431,84 @@ def compute_texture_variance(
 
     variance = np.maximum(0, local_sq_mean - local_mean ** 2)
     return variance.astype(np.float32)
+
+
+# Function alias
+apply_lee_filter = lee_filter_fast
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# CLASS WRAPPER FOR PIPELINES AND AGENTS
+# ──────────────────────────────────────────────────────────────────────────
+
+class SARProcessor:
+    """Object-oriented wrapper for SAR signal processing routines.
+    
+    Supports:
+    - Radiometric calibration (raw DN -> σ⁰ in dB)
+    - Lee speckle filtering (preserves building edges while suppressing speckle)
+    - Backscatter thresholding (water body and urban boundary detection)
+    - Dual-pol polarization ratio analysis (VV / VH)
+    - Temporal log-ratio change detection
+    """
+
+    def __init__(self, default_calibration_constant: float = 1.0):
+        self.default_calibration_constant = default_calibration_constant
+
+    def calibrate_sigma0(
+        self,
+        dn_array: np.ndarray,
+        calibration_constant: Optional[float] = None,
+        is_already_db: bool = False,
+    ) -> np.ndarray:
+        """Calibrate raw SAR DN to backscatter σ⁰ in dB (returns ndarray)."""
+        const = calibration_constant or self.default_calibration_constant
+        result = calibrate_sigma0(dn_array, calibration_constant=const, is_already_db=is_already_db)
+        return result.sigma0_db
+
+    def calibrate(
+        self,
+        dn_array: np.ndarray,
+        calibration_constant: Optional[float] = None,
+        is_already_db: bool = False,
+    ) -> SARCalibrationResult:
+        """Calibrate raw SAR DN to full SARCalibrationResult."""
+        const = calibration_constant or self.default_calibration_constant
+        return calibrate_sigma0(dn_array, calibration_constant=const, is_already_db=is_already_db)
+
+    def apply_lee_filter(
+        self,
+        image: Union[np.ndarray, SARCalibrationResult],
+        window_size: int = 5,
+    ) -> np.ndarray:
+        """Apply adaptive Lee speckle noise filter."""
+        if isinstance(image, SARCalibrationResult):
+            arr = image.sigma0_db
+        else:
+            arr = np.asarray(image, dtype=np.float32)
+        return lee_filter_fast(arr, window_size=window_size)
+
+    def detect_water(
+        self,
+        sar_image_db: np.ndarray,
+        threshold_db: float = -16.0,
+    ) -> WaterDetectionResult:
+        """Detect open water bodies via low backscatter threshold."""
+        return detect_water_threshold(sar_image_db, threshold_db=threshold_db)
+
+    def compute_polarization_ratio(
+        self,
+        vv: np.ndarray,
+        vh: np.ndarray,
+    ) -> np.ndarray:
+        """Compute VV/VH ratio in linear space."""
+        return compute_polarization_ratio(vv, vh)
+
+    def compute_log_ratio(
+        self,
+        t1_linear: np.ndarray,
+        t2_linear: np.ndarray,
+        threshold_std: float = 2.0,
+    ) -> SARChangeResult:
+        """Compute temporal log-ratio change detection."""
+        return sar_log_ratio_change(t1_linear, t2_linear, threshold_std=threshold_std)
