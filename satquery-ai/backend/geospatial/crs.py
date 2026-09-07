@@ -141,3 +141,58 @@ def inspect_crs(crs_input: Any) -> CRSInfo:
             status="warning",
             wkt=str(e),
         )
+
+
+def detect_crs_from_tags(tags: Dict[str, Any]) -> Optional[str]:
+    """Attempt to detect a valid CRS string or EPSG from metadata tags."""
+    if not tags:
+        return None
+    for key in ("CRS", "PROJECTION", "crs", "projection", "epsg", "EPSG"):
+        if key in tags and tags[key]:
+            val = str(tags[key]).strip()
+            info = inspect_crs(val)
+            if info.valid and info.status == "ok":
+                return val
+    return None
+
+
+def is_projected_crs(crs_input: Any) -> bool:
+    """Check if a given CRS string, EPSG code, or CRS object represents a projected coordinate system."""
+    if not crs_input:
+        return False
+    if isinstance(crs_input, str):
+        s = crs_input.strip().upper()
+        if "UTM" in s:
+            return True
+        if s in ("EPSG:4326", "WGS84", "WGS 84", "CRS84", "OGC:CRS84"):
+            return False
+    info = inspect_crs(crs_input)
+    return info.valid and info.crs_type == "projected"
+
+
+def reproject_bounds_wgs84(bounds: Any, src_crs: Any) -> Optional[Dict[str, float]]:
+    """Reproject bounding box coordinates to WGS84 (EPSG:4326)."""
+    if not bounds or not src_crs or not HAS_GEO:
+        return None
+    try:
+        transformer = pyproj.Transformer.from_crs(src_crs, "EPSG:4326", always_xy=True)
+        if isinstance(bounds, (list, tuple)) and len(bounds) == 4:
+            minx, miny, maxx, maxy = bounds
+        elif isinstance(bounds, dict):
+            minx = bounds.get("min_x", bounds.get("xmin", bounds.get("min_lon", 0.0)))
+            miny = bounds.get("min_y", bounds.get("ymin", bounds.get("min_lat", 0.0)))
+            maxx = bounds.get("max_x", bounds.get("xmax", bounds.get("max_lon", 0.0)))
+            maxy = bounds.get("max_y", bounds.get("ymax", bounds.get("max_lat", 0.0)))
+        else:
+            return None
+        min_lon, min_lat = transformer.transform(minx, miny)
+        max_lon, max_lat = transformer.transform(maxx, maxy)
+        return {
+            "min_lon": min_lon,
+            "min_lat": min_lat,
+            "max_lon": max_lon,
+            "max_lat": max_lat,
+        }
+    except Exception:
+        return None
+

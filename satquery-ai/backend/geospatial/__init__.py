@@ -17,6 +17,8 @@ from .geometry import pixel_to_coords, coords_to_pixel, bbox_to_geojson_polygon
 from .tiling import generate_raster_tiles, RasterTileWindow
 from .registration import align_image_pairs
 from .isro_formats import detect_isro_sensor, get_isro_sensor_catalog, ISROSensorProfile
+from .sar_processor import SARProcessor
+from .indices import compute_savi, compute_mndwi, compute_ndmi, compute_bsi
 
 __all__ = [
     "inspect_crs",
@@ -45,4 +47,9 @@ __all__ = [
     "detect_isro_sensor",
     "get_isro_sensor_catalog",
     "ISROSensorProfile",
+    "SARProcessor",
+    "compute_savi",
+    "compute_mndwi",
+    "compute_ndmi",
+    "compute_bsi",
 ]
