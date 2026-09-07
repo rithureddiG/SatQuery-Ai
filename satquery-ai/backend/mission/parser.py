@@ -162,16 +162,6 @@ class MissionParser:
                 requires_sar_radar=True,
                 requires_optical=True,
             )
-        elif has_change or available_assets_count >= 2:
-            intent = MissionIntent.TEMPORAL_CHANGE
-            temporal = TemporalScope.BI_TEMPORAL if available_assets_count <= 2 else TemporalScope.MULTI_TEMPORAL
-            req_assets = max(2, available_assets_count)
-            req_mods = ["optical"]
-            constraints = MissionConstraints(
-                requires_same_aoi=True,
-                requires_coregistration=True,
-                requires_optical=True,
-            )
         elif has_fusion or (has_sar_available and "flood" in q_lower):
             intent = MissionIntent.CROSS_MODAL_FUSION
             temporal = TemporalScope.MONO_TEMPORAL
@@ -181,6 +171,16 @@ class MissionParser:
                 requires_same_aoi=True,
                 requires_coregistration=True,
                 requires_sar_radar=True,
+                requires_optical=True,
+            )
+        elif has_change or available_assets_count >= 2:
+            intent = MissionIntent.TEMPORAL_CHANGE
+            temporal = TemporalScope.BI_TEMPORAL if available_assets_count <= 2 else TemporalScope.MULTI_TEMPORAL
+            req_assets = max(2, available_assets_count)
+            req_mods = ["optical"]
+            constraints = MissionConstraints(
+                requires_same_aoi=True,
+                requires_coregistration=True,
                 requires_optical=True,
             )
         elif has_grounding:
