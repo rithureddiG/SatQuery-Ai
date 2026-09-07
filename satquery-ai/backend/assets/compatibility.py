@@ -71,6 +71,19 @@ class CompatibilityEngine:
     MAX_TEMPORAL_GAP_DAYS: float = 3650  # 10 years maximum temporal gap
     IDEAL_TEMPORAL_GAP_DAYS: float = 730  # 2 years is ideal for change detection
 
+    def check_compatibility(
+        self,
+        asset_a: EarthObservationAsset,
+        asset_b: EarthObservationAsset,
+        intended_task: str = "change_detection",
+    ) -> CompatibilityReport:
+        """General task-aware compatibility dispatcher."""
+        if intended_task in ("cross_modal", "corroboration", "sar_optical"):
+            if asset_a.is_sar and not asset_b.is_sar:
+                return self.check_cross_modal_pair(optical_asset=asset_b, sar_asset=asset_a)
+            return self.check_cross_modal_pair(optical_asset=asset_a, sar_asset=asset_b)
+        return self.check_temporal_pair(asset_before=asset_a, asset_after=asset_b)
+
     def check_temporal_pair(
         self,
         asset_before: EarthObservationAsset,

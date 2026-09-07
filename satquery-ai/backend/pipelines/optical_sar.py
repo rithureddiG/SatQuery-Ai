@@ -102,7 +102,7 @@ def run_optical_sar_pipeline(
     t1 = time.perf_counter()
     fusion_result = dofa_adapter.fuse_and_corroborate(optical_path, sar_path)
     corroboration_score = fusion_result["corroboration_score"]
-    model_conf = fusion_result["model_confidence"]
+    model_conf = fusion_result.get("model_confidence", corroboration_score)
 
     steps.append(
         ExecutionStep(
