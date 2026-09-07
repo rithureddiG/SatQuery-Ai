@@ -136,14 +136,51 @@ def run_visual_grounding_pipeline(
     features = []
     total_area_m2 = 0.0
 
+    # Optional SAM refinement
+    from ..models.sam import sam_adapter
+    rgb_arr = None
+    try:
+        from PIL import Image
+        rgb_arr = np.array(Image.open(image_path).convert("RGB"))
+    except Exception:
+        pass
+
     for idx, b in enumerate(boxes):
-        geojson_poly, area_m2 = transform_box_to_geojson_polygon(
-            box=b,
-            width=width,
-            height=height,
-            transform=transform,
-            epsg=epsg,
-        )
+        # 1. Bounding box to pixel coordinates
+        ymin, xmin, ymax, xmax = b["ymin"], b["xmin"], b["ymax"], b["xmax"]
+        px_min, px_max = xmin * width, xmax * width
+        py_min, py_max = ymin * height, ymax * height
+
+        # 2. Refine box to polygon boundary via SAM if array is available
+        refined_poly = None
+        if rgb_arr is not None:
+            try:
+                _, _, sam_poly = sam_adapter.refine_box_to_mask(rgb_arr, [px_min, py_min, px_max, py_max])
+                if len(sam_poly) >= 3:
+                    # Convert SAM pixel vertices to spatial coordinates
+                    geo_pts = [pixel_to_coords(pt[0], pt[1], transform) for pt in sam_poly]
+                    geo_pts.append(geo_pts[0])  # Close polygon
+                    refined_poly = {"type": "Polygon", "coordinates": [[[round(p[0], 5), round(p[1], 5)] for p in geo_pts]]}
+            except Exception:
+                pass
+
+        if refined_poly is not None:
+            geojson_poly = refined_poly
+            # Area from refined polygon
+            poly_obj = Polygon(geojson_poly["coordinates"][0])
+            area_m2 = round(float(poly_obj.area), 2)
+            centroid_pt = [round(poly_obj.centroid.x, 5), round(poly_obj.centroid.y, 5)]
+        else:
+            geojson_poly, area_m2 = transform_box_to_geojson_polygon(
+                box=b,
+                width=width,
+                height=height,
+                transform=transform,
+                epsg=epsg,
+            )
+            poly_obj = Polygon(geojson_poly["coordinates"][0])
+            centroid_pt = [round(poly_obj.centroid.x, 5), round(poly_obj.centroid.y, 5)]
+
         total_area_m2 += area_m2
         features.append({
             "type": "Feature",
@@ -152,6 +189,11 @@ def run_visual_grounding_pipeline(
                 "label": referring_expression,
                 "confidence": raw_confidence,
                 "area_m2": area_m2,
+                "area_ha": round(area_m2 / 10000.0, 4),
+                "area_km2": round(area_m2 / 1000000.0, 4),
+                "centroid": centroid_pt,
+                "mask_available": refined_poly is not None,
+                "polygon_available": True,
                 "bbox_normalized": b,
                 "bbox_pixel": {
                     "ymin": int(b["ymin"] * height),
