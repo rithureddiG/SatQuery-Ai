@@ -36,6 +36,8 @@ class StorageManager:
 
     def get_upload_path(self, image_id: str, filename: str) -> Path:
         """Get safe target path for an uploaded image."""
+        if ".." in filename:
+            raise ValueError(f"Path traversal detected: {filename}")
         safe_fn = self.sanitize_filename(filename)
         dest_filename = f"{image_id}_{safe_fn}"
         target_path = (self.upload_dir / dest_filename).resolve()
@@ -76,3 +78,11 @@ class StorageManager:
 
 
 storage_manager = StorageManager()
+sanitize_filename = storage_manager.sanitize_filename
+
+
+def validate_file_safety(filename: str) -> bool:
+    """Check whether a filename poses path traversal or execution risks."""
+    if ".." in filename or "/" in filename or "\\" in filename or ";" in filename:
+        return False
+    return True
