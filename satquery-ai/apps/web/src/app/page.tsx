@@ -156,15 +156,15 @@ export default function Home() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="space-y-6">
               <UploadZone onInspectionComplete={handleInspectionComplete} />
-              {inspectionData && <MetadataPanel inspection={inspectionData} />}
-              {inspectionData && <ValidationPanel inspection={inspectionData} />}
+              {inspectionData?.metadata && <MetadataPanel metadata={inspectionData.metadata} />}
+              {inspectionData?.validation && <ValidationPanel validation={inspectionData.validation} />}
             </div>
 
             <div className="lg:col-span-2 space-y-6">
               {changeResult ? (
-                <ChangeViewer result={changeResult} />
+                <ChangeViewer changeResult={changeResult} />
               ) : opticalSARResult ? (
-                <OpticalSARViewer result={opticalSARResult} />
+                <OpticalSARViewer fusionResult={opticalSARResult} />
               ) : (
                 <ImageViewer inspection={inspectionData} groundingFeatures={groundingFeatures} />
               )}

@@ -1,0 +1,14 @@
+{
+  "name": "satquery-ai",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "satquery-ai/apps/web"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=satquery-web",
+    "build": "npm run build --workspace=satquery-web",
+    "start": "npm run start --workspace=satquery-web",
+    "lint": "npm run lint --workspace=satquery-web"
+  }
+}

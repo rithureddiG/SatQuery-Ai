@@ -3,7 +3,9 @@
 import React from 'react';
 import { Calendar } from 'lucide-react';
 
-export type TemporalViewMode = 'Swipe' | 'SideBySide' | 'Difference';
+import { TemporalViewMode } from '../../context/WorkspaceContext';
+
+export type { TemporalViewMode };
 
 interface TemporalControllerProps {
   sliderPos: number;
@@ -78,9 +80,9 @@ export const TemporalController: React.FC<TemporalControllerProps> = ({
         </button>
 
         <button
-          onClick={() => onSelectTemporalMode('SideBySide')}
+          onClick={() => onSelectTemporalMode('Side by Side')}
           className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-            temporalMode === 'SideBySide'
+            temporalMode === 'Side by Side'
               ? 'bg-[#0A0A0A] text-white shadow-sm font-semibold'
               : 'text-[#666666] hover:text-[#111111]'
           }`}

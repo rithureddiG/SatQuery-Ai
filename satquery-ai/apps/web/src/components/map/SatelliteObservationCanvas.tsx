@@ -342,7 +342,7 @@ export const SatelliteObservationCanvas: React.FC<SatelliteObservationCanvasProp
             T2 · {dateT2}
           </div>
         </div>
-      ) : temporalMode === 'SideBySide' ? (
+      ) : temporalMode === 'Side by Side' ? (
         /* 2. Side-By-Side Mode (Dual Viewports) */
         <div className="grid grid-cols-2 w-full h-full divide-x divide-white/20">
           <div className="relative w-full h-full overflow-hidden">

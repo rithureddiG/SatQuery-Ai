@@ -151,7 +151,7 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
           )}
           {metadata?.crs && (
             <span className="text-satblue-300 border-l border-space-800 pl-3">
-              CRS: {metadata.crs.epsg_code ? `EPSG:${metadata.crs.epsg_code}` : 'UTM Projected'}
+              CRS: {metadata.crs.epsg ? `EPSG:${metadata.crs.epsg}` : 'UTM Projected'}
             </span>
           )}
         </div>

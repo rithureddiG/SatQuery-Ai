@@ -249,7 +249,7 @@ export const InteractiveGeoMap: React.FC<InteractiveGeoMapProps> = ({
           {previewUrl ? (
             <img
               ref={imgRef}
-              src={getPreviewUrl(previewUrl)}
+              src={getPreviewUrl(previewUrl) ?? undefined}
               alt="Satellite Raster"
               className={`max-h-[500px] w-auto object-contain rounded-md border border-neutral-800 ${
                 activeLens === 'NIR'

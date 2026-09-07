@@ -230,6 +230,7 @@ export interface OpticalSARAnalysisResult {
 export interface AgentQueryResponse {
   query: string;
   intent: string;
+  task?: string;
   intent_confidence: number;
   job_id: string;
   answer: string;

@@ -13,7 +13,9 @@ import {
   RotateCcw,
 } from 'lucide-react';
 
-export type MapTool = 'select' | 'polygon' | 'box' | 'pin' | 'measure';
+import { MapTool } from '../../context/WorkspaceContext';
+
+export type { MapTool };
 
 interface MapControlsProps {
   activeTool: MapTool;
