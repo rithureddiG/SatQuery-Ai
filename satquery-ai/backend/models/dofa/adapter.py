@@ -211,6 +211,7 @@ class DOFAAdapter:
 
         return {
             "corroboration_score": corroboration_score,
+            "model_confidence": corroboration_score,
             "spatial_iou": spatial_iou,
             "spatial_agreement_ratio": spatial_agreement_ratio,
             "joint_claim": " ".join(joint_findings),
