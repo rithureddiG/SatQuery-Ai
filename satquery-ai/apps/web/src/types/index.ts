@@ -127,6 +127,60 @@ export interface EvidenceObject {
   created_at: string;
 }
 
+export interface FindingObservation {
+  asset_ids: string[];
+  modality: string;
+  acquisition_time: string;
+  sensor: string;
+}
+
+export interface FindingModel {
+  name: string;
+  version: string;
+  checkpoint: string;
+  real_weights: boolean;
+}
+
+export interface FindingSpatial {
+  geometry: any;
+  crs: string;
+  area_m2: number;
+  area_ha: number;
+  bbox: { ymin: number; xmin: number; ymax: number; xmax: number };
+}
+
+export interface FindingConfidence {
+  model_confidence: number;
+  evidence_score: number;
+  calibrated_confidence: number;
+}
+
+export interface FindingProvenance {
+  source_assets: string[];
+  processing_steps: string[];
+  timestamps: string[];
+}
+
+export interface FindingVisualEvidence {
+  raster_window: string;
+  overlay: string;
+  annotation: string;
+}
+
+export interface Finding {
+  id: string;
+  mission_id: string;
+  query: string;
+  title: string;
+  category: string;
+  observation: FindingObservation;
+  model: FindingModel;
+  spatial: FindingSpatial;
+  confidence: FindingConfidence;
+  provenance: FindingProvenance;
+  visual_evidence: FindingVisualEvidence;
+}
+
 export interface VQAAnalysisResult {
   job_id: string;
   image_id: string;
@@ -267,4 +321,40 @@ export interface HealthResponse {
   version?: string;
   environment?: string;
   hardware?: HardwareInfo;
+}
+
+export interface SatelliteObservationItem {
+  id: string;
+  title: string;
+  sensor: 'Sentinel-2 L2A' | 'Sentinel-1 C-SAR' | 'Landsat-9 OLI';
+  modality: 'optical' | 'sar' | 'multispectral';
+  date: string;
+  dateFormatted: string;
+  cloudCoverPct: number;
+  sunElevationDeg: number;
+  orbit: string;
+  polarization?: string;
+  resolution: string;
+  bands: string[];
+  thumbnailUrl: string;
+  previewUrl?: string;
+  utmZone: string;
+  epsg: number;
+  bbox: [number, number, number, number];
+  stacCollection: string;
+  provider: string;
+  qualityScore: number;
+  processingLevel: string;
+}
+
+export interface SearchEarthLocation {
+  name: string;
+  displayName: string;
+  lat: number;
+  lon: number;
+  utmZone: string;
+  epsg: number;
+  bbox: [number, number, number, number];
+  country: string;
+  areaEstimateKm2?: number;
 }

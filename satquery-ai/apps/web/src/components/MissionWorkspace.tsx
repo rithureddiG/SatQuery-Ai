@@ -11,6 +11,12 @@ import { TraceDrawer } from './drawers/TraceDrawer';
 import { LayersDrawer } from './drawers/LayersDrawer';
 import { ReportExportModal } from './ReportExportModal';
 import { SettingsModal } from './modals/SettingsModal';
+import { LiveSatelliteModal } from './modals/LiveSatelliteModal';
+import { BenchmarkModal } from './modals/BenchmarkModal';
+import { EarthExplorerModal } from './modals/EarthExplorerModal';
+import { EvidenceModal } from './modals/EvidenceModal';
+import { TraceModal } from './modals/TraceModal';
+import { ObservationPicker } from './ObservationPicker';
 import { WorkspaceProvider, useWorkspace } from '../context/WorkspaceContext';
 
 interface MissionWorkspaceProps {
@@ -111,6 +117,28 @@ function MissionWorkspaceInner({
       />
 
       <SettingsModal />
+
+      <LiveSatelliteModal
+        isOpen={ws.isLiveSatelliteOpen}
+        onClose={() => ws.setIsLiveSatelliteOpen(false)}
+      />
+
+      <BenchmarkModal
+        isOpen={ws.isBenchmarkOpen}
+        onClose={() => ws.setIsBenchmarkOpen(false)}
+      />
+
+      <EarthExplorerModal
+        isOpen={ws.isEarthExplorerOpen}
+        onClose={() => ws.setIsEarthExplorerOpen(false)}
+      />
+
+      <EvidenceModal />
+
+      <TraceModal />
+
+      {/* STAC Observation Picker */}
+      <ObservationPicker />
     </div>
   );
 }
@@ -122,3 +150,7 @@ export function MissionWorkspace(props: MissionWorkspaceProps) {
     </WorkspaceProvider>
   );
 }
+
+export { SearchEarth } from './SearchEarth';
+export { ObservationPicker } from './ObservationPicker';
+

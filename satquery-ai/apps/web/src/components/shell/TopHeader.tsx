@@ -5,6 +5,9 @@ import {
   Target,
   ChevronDown,
   Check,
+  Satellite,
+  Award,
+  Globe,
 } from 'lucide-react';
 import { useWorkspace, Scenario, CANONICAL_MISSIONS } from '../../context/WorkspaceContext';
 
@@ -103,27 +106,49 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
         )}
       </div>
 
-      {/* Right: Quick Tabs (Workspace, Evidence, Reports) & Status Pill */}
-      <div className="flex items-center gap-4">
+      {/* Right: Quick Tabs (Workspace, Evidence, Reports, Live Satellite, SIH Audit) & Status Pill */}
+      <div className="flex items-center gap-3">
         {/* Navigation Links */}
         <div className="flex items-center gap-1 text-xs font-semibold text-[#6F6F6A]">
           <button
             onClick={() => ws.closeDrawer()}
-            className="px-3 py-1.5 rounded-lg hover:text-[#111111] hover:bg-[#FAF9F7] transition-colors"
+            className="px-2.5 py-1.5 rounded-lg hover:text-[#111111] hover:bg-[#FAF9F7] transition-colors"
           >
             Workspace
           </button>
           <button
             onClick={() => ws.toggleDrawer('evidence')}
-            className="px-3 py-1.5 rounded-lg hover:text-[#111111] hover:bg-[#FAF9F7] transition-colors"
+            className="px-2.5 py-1.5 rounded-lg hover:text-[#111111] hover:bg-[#FAF9F7] transition-colors"
           >
             Evidence
           </button>
           <button
             onClick={() => ws.openExport('pdf')}
-            className="px-3 py-1.5 rounded-lg hover:text-[#111111] hover:bg-[#FAF9F7] transition-colors"
+            className="px-2.5 py-1.5 rounded-lg hover:text-[#111111] hover:bg-[#FAF9F7] transition-colors"
           >
             Reports
+          </button>
+          <button
+            onClick={() => ws.setIsEarthExplorerOpen(true)}
+            className="px-2.5 py-1.5 rounded-lg text-satblue-700 bg-satblue-50 hover:bg-satblue-100 hover:text-satblue-900 border border-satblue-200 transition-colors flex items-center gap-1.5 font-medium"
+            title="Search Any Location on Earth / Custom STAC Ingestion"
+          >
+            <Globe className="w-3.5 h-3.5 text-satblue-600" />
+            <span>Earth Explorer</span>
+          </button>
+          <button
+            onClick={() => ws.setIsLiveSatelliteOpen(true)}
+            className="px-2.5 py-1.5 rounded-lg text-emerald-700 bg-emerald-50 hover:bg-emerald-100 hover:text-emerald-900 border border-emerald-200 transition-colors flex items-center gap-1.5"
+          >
+            <Satellite className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Live Satellite</span>
+          </button>
+          <button
+            onClick={() => ws.setIsBenchmarkOpen(true)}
+            className="px-2.5 py-1.5 rounded-lg text-[#111111] bg-[#FAF9F7] hover:bg-[#F0EFEA] border border-[#E6E6E1] transition-colors flex items-center gap-1.5"
+          >
+            <Award className="w-3.5 h-3.5 text-amber-500" />
+            <span>SIH Audit</span>
           </button>
         </div>
 
@@ -139,7 +164,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           ) : ws.systemState === 'VERIFIED' ? (
             <>
               <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)]" />
-              <span className="text-emerald-800 font-bold">VERIFIED</span>
+              <span className="text-emerald-800 font-bold">SIH EVIDENCE VERIFIED</span>
             </>
           ) : ws.systemState === 'OFFLINE' ? (
             <>
