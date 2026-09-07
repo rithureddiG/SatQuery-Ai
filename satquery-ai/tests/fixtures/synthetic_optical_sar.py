@@ -56,7 +56,7 @@ def create_synthetic_optical_sar_pair(
         transform=transform,
     ) as dst:
         dst.write(opt_data)
-        dst.set_tag_item("SENSOR_TYPE", "OPTICAL_SENTINEL2")
+        dst.update_tags(SENSOR_TYPE="OPTICAL_SENTINEL2")
 
     # 2. SAR Data: 1-band Radar Backscatter Sigma0 in dB (-25.0 to 0.0 dB)
     sar_data = np.random.RandomState(45).uniform(-18.0, -8.0, (1, height, width)).astype(np.float32)
@@ -75,7 +75,6 @@ def create_synthetic_optical_sar_pair(
         transform=transform,
     ) as dst:
         dst.write(sar_data)
-        dst.set_tag_item("SENSOR_TYPE", "SAR_SENTINEL1_GRD")
-        dst.set_tag_item("POLARIZATION", "VV")
+        dst.update_tags(SENSOR_TYPE="SAR_SENTINEL1_GRD", POLARIZATION="VV")
 
     return optical_path, sar_path
