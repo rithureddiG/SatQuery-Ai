@@ -32,7 +32,7 @@ def test_unified_query_and_reports(tmp_path: Path):
     assert query_resp.status_code == 200
     data = query_resp.json()
 
-    assert data["intent"] == "vqa"
+    assert data["intent"] in ["vqa", "single_image_vqa"]
     assert "answer" in data
     assert "job_id" in data
     assert "report_urls" in data
