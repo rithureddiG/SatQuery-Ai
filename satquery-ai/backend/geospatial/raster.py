@@ -37,6 +37,10 @@ class ModalityDetection:
     confidence: float
     basis: List[str] = field(default_factory=list)
 
+    @property
+    def detected(self) -> str:
+        return self.modality
+
 
 def compute_band_stats(
     dataset_or_array: Any,
