@@ -279,7 +279,7 @@ class BenchmarkHarness:
         latency_ms = round(((time.perf_counter() - t0) * 1000) / len(validation_pairs), 1)
 
         result = MetricResult(
-            benchmark_name="Evidence Score Calibration (Platt / ECE)",
+            benchmark_name="Confidence Probability Calibration (Platt / ECE)",
             sample_count=len(validation_pairs),
             primary_metric_name="ECE (%)",
             primary_metric_value=report.to_dict()["expected_calibration_error_pct"],
@@ -616,6 +616,22 @@ class BenchmarkHarness:
     def run_all(self) -> Dict[str, Any]:
         """Alias for run_sample_validation(). See that method for details."""
         return self.run_sample_validation()
+
+    def evaluate_rsvqa(self, sample_count: int = 20) -> MetricResult:
+        return self.evaluate_rsvqa_sample()
+
+    def evaluate_grounding(self, sample_count: int = 20) -> MetricResult:
+        return self.evaluate_grounding_sample()
+
+    def evaluate_cdvqa(self, sample_count: int = 20) -> MetricResult:
+        return self.evaluate_cdvqa_sample()
+
+    def evaluate_bigearthnet_corroboration(self, sample_count: int = 20) -> MetricResult:
+        return self.evaluate_bigearthnet_sample()
+
+    def evaluate_confidence_calibration(self) -> Tuple[MetricResult, CalibrationReport]:
+        return self.evaluate_confidence_calibration_sample()
+
 
     # ─────────────────────────────────────────────────────────────────────
     # HELPER METHODS
