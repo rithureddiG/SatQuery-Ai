@@ -64,13 +64,21 @@ The launcher automatically:
 
 ---
 
-## 5. Documentation Directory
+## 5. Documentation Directory & Scientific Audits
 
+- [`docs/CLEAN_MACHINE_VERIFICATION.md`](docs/CLEAN_MACHINE_VERIFICATION.md) — Clean-machine release audit: zero local path assumptions, reproducible setup, and 5-gate master test report.
+- [`docs/IMPLEMENTATION_TRUTH_MATRIX.md`](docs/IMPLEMENTATION_TRUTH_MATRIX.md) — Forensic audit of all 18 subsystems classifying execution modes, real-data requirements, and fallbacks.
+- [`docs/GOLDEN_MISSION.md`](docs/GOLDEN_MISSION.md) — Canonical 19-stage end-to-end built-up change detection pipeline with optical and SAR corroboration.
+- [`docs/EVIDENCE_POLICY.md`](docs/EVIDENCE_POLICY.md) — Mathematical formulation of the Evidence Gate, reliability factors ($R_{\text{reg}}, R_{\text{cloud}}, R_{\text{gsd}}, R_{\text{agree}}$), and QUALIFY/ABSTAIN decisions.
+- [`docs/FAILURE_MODES.md`](docs/FAILURE_MODES.md) — Handling of missing models, cloudy scenes, unaligned CRS, and insufficient evidence without synthetic outputs.
+- [`docs/SIH_JUDGE_AUDIT.md`](docs/SIH_JUDGE_AUDIT.md) — Hostile SIH evaluator testing protocol evaluating 15 live capability vectors.
 - [`docs/FINAL_TRUTH_MATRIX.md`](docs/FINAL_TRUTH_MATRIX.md) — Color-coded capability verification matrix.
 - [`docs/SIH_FINAL_TRACEABILITY.md`](docs/SIH_FINAL_TRACEABILITY.md) — Traceability matrix covering all 10 SIH requirements.
 - [`docs/METHODOLOGY_AND_SIH_VERIFICATION.md`](docs/METHODOLOGY_AND_SIH_VERIFICATION.md) — Mathematical formulas and 5-Mission proofs.
 - [`docs/REPRODUCIBILITY.md`](docs/REPRODUCIBILITY.md) — Reproduction guide for external evaluators.
 - [`docs/FINAL_RELEASE_AUDIT.md`](docs/FINAL_RELEASE_AUDIT.md) — Complete forensic audit and sign-off report.
+- [`verification_report.json`](verification_report.json) — Automated 5-gate release verification output (`python scripts/run_all_verification.py`).
+- [`models_manifest.json`](models_manifest.json) — Truthful model registry auditing device, weights presence, VRAM envelope, and fallback status.
 
 ---
 

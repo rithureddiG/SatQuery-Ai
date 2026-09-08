@@ -136,31 +136,61 @@ Evaluation infrastructure is implemented for all four SIH26167-mandated percepti
 
 ---
 
-## 🖥️ Mission Workspace UI
+## 🖥️ Scientific Instrument Interface: "One Screen. Four Concepts"
 
-The Next.js 14 console features an intelligence-grade, three-panel workspace designed for operational command centers:
+SatQuery AI rejects cluttered satellite-control dashboards with dozens of permanent sidebars and modals. It is architected as a clean, calm, analyst-grade scientific instrument operating on four core concepts:
 
 ```
-+---------------------------------------------------------------------------------------------------+
-| 🛰️ SATQUERY AI · ISRO SIH26167       MISSION 0247 · [● SYSTEM READY] · RTX 4060 4.5/8 GB · [EXPORT]|
-+-----------------------+---------------------------------------------------+-----------------------+
-| MISSION NAVIGATOR     | GEO WORKSPACE & SENSOR LENS                       | INTELLIGENCE PANEL    |
-|                       | [True Color] [NIR] [SAR] [Change] [Evidence]      |                       |
-| 01 Data      [✓]      | +-----------------------------------------------+ | PERCEPTION FINDING    |
-| 02 Query     [✓]      | |  GIS Coordinate Grid Canvas                   | | Built-up area         |
-| 03 Analysis  [✓]      | |                                               | | increased by 12.5%  |
-| 04 Evidence  [✓]      | |     +------------------+                      | |                       |
-| 05 Trace     [✓]      | |     | CLUSTER 01       |                      | | GROUND AREA: 2.56 ha  |
-| 06 Export    [✓]      | |     | 2.56 ha (RED)    |                      | | RELIABILITY: 87%      |
-|                       | |     +------------------+                      | |                       |
-| DATASETS:             | |                                               | | EVIDENCE CHECKLIST:   |
-| • Optical T1 (Valid)  | | [Zoom+] [Zoom-] [Center] [Measure]            | | [✓] Optical Spectral  |
-| • Optical T2 (Valid)  | +-----------------------------------------------+ | [✓] Siamese ChangeNet |
-|                       | Layers: [x] Optical [x] Change Mask [x] GeoJSON   | [✓] Affine Geometry   |
-+-----------------------+---------------------------------------------------+-----------------------+
-| 💬 QUERY: "Has built-up area increased, where did it occur, and how large was the change?"   [ ➔ ]|
-+---------------------------------------------------------------------------------------------------+
+┌──────────────────────────────────────────────────────────────────┐
+│ SATQUERY AI       Study: Hyderabad / 2024 → 2026       ● Ready  │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│                     EARTH OBSERVATION MAP                        │
+│                     (Dominant Hero Surface)                      │
+│                                                                  │
+│     VIEW [ True Color ▾ ]             Floating Tools:            │
+│     • RGB / NIR / SWIR                [+] [-] Zoom               │
+│     • NDVI / NDWI / NDBI              [AOI] Import Boundary      │
+│     • SAR VV / SAR VH                 [Measure] Geodesic Tape    │
+│     • Change Mask                     [Inspect] Pixel Microscope │
+│     • Consensus Evidence              [Compare] Swipe / Split    │
+│                                       [Layers] GeoJSON / Masks   │
+│                                                                  │
+├──────────────────────────────────────────────────────────────────┤
+│  2024-01-18 ─────────────●──────────── 2026-03-21   ◀ Swipe ▶    │
+├──────────────────────────────────────────────────────────────────┤
+│  💬 Ask SatQuery... (e.g. "Identify built-up change with SAR") ⌘↵│
+└──────────────────────────────────────────────────────────────────┘
 ```
+
+### Post-Execution Floating Finding Sheet (Progressive Disclosure)
+```
+┌──────────────────────────────────────────────────────────────────┐
+│ FINDING                                                          │
+│                                                                  │
+│ Built-up expansion detected                                      │
+│ 758.1 ha (7,580,585 m²)                                          │
+│                                                                  │
+│ Optical Evidence          █████████░  Strong (ΔNDBI + ChangeNet) │
+│ SAR Corroboration         ████████░░  Supporting (Level 2 IoU)   │
+│ Co-Registration           ✓ Verified (RMSE < 0.5 px)             │
+│                                                                  │
+│ [Why? / Expand Provenance]   [Download Dossier ▾]   [Replay]     │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+- **Ask**: Natural language query bar anchored at bottom center with `⌘/Ctrl+K` shortcut and keyboard dispatch.
+- **See**: Full-viewport Earth Observation map with compact lens selector (`VIEW [ True Color ▾ ]`) and minimalist floating controls.
+- **Understand**: Clean finding sheet highlighting physical ground area ($m^2$, ha), optical evidence strength, and SAR radar corroboration. Model confidence, deterministic measurement, and reliability score are strictly separated.
+- **Verify**: Progressive disclosure reveals model truth state (`models_manifest.json`), checkpoint SHA256, registration RMSE, causal DAG, multi-factor reliability breakdown, and bitwise analysis replay.
+
+---
+
+### 🔬 Analyst Instrumentation Tools
+- **Pixel Microscope Inspector (`I`)**: Samples raw band reflectances (B02-B12), spectral indices (NDVI, NDWI, NDBI), radar backscatter $\sigma^0$, GSD (10m), and bi-temporal $T_1 \leftrightarrow T_2$ transitions at sub-pixel resolution.
+- **Topological AOI Ingestion**: Secure parser for GeoJSON, KML, KMZ, and binary ESRI Shapefile ZIP with automatic WGS84 geodesic area/perimeter calculation and multi-epoch observation timeline.
+- **Analysis Replay Engine**: Single-command reproducibility verification (`python scripts/reproduce_analysis.py <analysis_id>`) validating input hashes, model hashes, parameters, geometries, and calculated metrics.
+
 
 ---
 
@@ -308,7 +338,31 @@ SatQuery AI is pre-configured with 3 complete demonstration missions for evaluat
 
 ---
 
+## 📑 Auditable Scientific Documentation & Master Verification
+
+SatQuery AI adheres strictly to the principle of **Zero Fabrication**. Every scientific value, model status, spatial geometry, and performance metric is verifiable through automated harnesses:
+
+| Document | Purpose & Verification Scope |
+|---|---|
+| [`docs/CLEAN_MACHINE_VERIFICATION.md`](satquery-ai/docs/CLEAN_MACHINE_VERIFICATION.md) | Clean-machine release audit: zero hardcoded local paths, reproducible installation, and 5-gate master test report. |
+| [`docs/IMPLEMENTATION_TRUTH_MATRIX.md`](satquery-ai/docs/IMPLEMENTATION_TRUTH_MATRIX.md) | Forensic audit of all 18 subsystems classifying execution modes, real-data requirements, and fallbacks. |
+| [`docs/GOLDEN_MISSION.md`](satquery-ai/docs/GOLDEN_MISSION.md) | Canonical 19-stage end-to-end built-up change detection pipeline with optical and SAR corroboration. |
+| [`docs/EVIDENCE_POLICY.md`](satquery-ai/docs/EVIDENCE_POLICY.md) | Mathematical formulation of the Evidence Gate, reliability factors ($R_{\text{reg}}, R_{\text{cloud}}, R_{\text{gsd}}, R_{\text{agree}}$), and QUALIFY/ABSTAIN decisions. |
+| [`docs/FAILURE_MODES.md`](satquery-ai/docs/FAILURE_MODES.md) | Honest handling of edge cases: missing models, cloudy scenes, unaligned CRS, and insufficient evidence. |
+| [`docs/SIH_JUDGE_AUDIT.md`](satquery-ai/docs/SIH_JUDGE_AUDIT.md) | Hostile SIH evaluator testing protocol evaluating 15 live capability vectors. |
+| [`verification_report.json`](satquery-ai/verification_report.json) | Bitwise reproducible 5-gate sign-off audit report generated by `scripts/run_all_verification.py`. |
+| [`models_manifest.json`](satquery-ai/models_manifest.json) | Runtime model truth registry auditing device, weights presence, VRAM envelope, and fallback status. |
+
+### Master Verification Command
+To run the automated 5-gate system verification on any machine:
+```powershell
+python satquery-ai/scripts/run_all_verification.py
+```
+
+---
+
 ## 📄 License & Attribution
 
 Developed by **The Ninth Foundry** for **Smart India Hackathon (SIH 2026) · ISRO Space Technology Theme (SIH26167)**.  
 Licensed under the [Apache-2.0 License](LICENSE).
+

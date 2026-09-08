@@ -1,0 +1,88 @@
+{
+  "overall_status": "PASSED",
+  "timestamp": "2026-09-08T16:51:55Z",
+  "commit_hash": "34955974eb432dd35e28ca192f885ea4983d598b",
+  "total_duration_seconds": 18.98,
+  "gates": {
+    "tests": {
+      "status": "PASSED",
+      "output_tail": [
+        "    ndwi = np.where(denominator > 1e-6, (green - nir) / denominator, -1.0)",
+        "",
+        "-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html"
+      ]
+    },
+    "models": {
+      "status": "PASSED",
+      "model_count": 5,
+      "device": "CPU",
+      "models": [
+        {
+          "id": "geochat-7b",
+          "name": "GeoChat-7B (VQA & Grounding)",
+          "status": "NOT_INSTALLED",
+          "truth_state": "CLASSICAL_FALLBACK"
+        },
+        {
+          "id": "changenet-v1",
+          "name": "Siamese ChangeNet (Bi-Temporal CD)",
+          "status": "READY_CPU",
+          "truth_state": "UNTRAINED_MODEL"
+        },
+        {
+          "id": "dofa-foundation",
+          "name": "DOFA Multimodal Foundation (Optical + SAR)",
+          "status": "CLASSICAL_FALLBACK",
+          "truth_state": "CLASSICAL_FALLBACK"
+        },
+        {
+          "id": "sam-rs",
+          "name": "SAM-RS (Spatial Mask Refinement)",
+          "status": "CLASSICAL_FALLBACK",
+          "truth_state": "CLASSICAL_FALLBACK"
+        },
+        {
+          "id": "sar-calibrator",
+          "name": "Calibrated SAR Radiometric Processor",
+          "status": "READY_CPU",
+          "truth_state": "REAL_MODEL"
+        }
+      ]
+    },
+    "golden_mission": {
+      "status": "PASSED",
+      "mission_id": "msn_golden_1788886314",
+      "measured_area_ha": 758.0585,
+      "cluster_count": 1,
+      "sar_corroboration": "UNCORROBORATED",
+      "gate_decision": "qualify",
+      "execution_time_ms": 661
+    },
+    "reproducibility": {
+      "status": "REPRODUCED",
+      "checks": {
+        "inputs": "PASSED",
+        "models": "PASSED",
+        "parameters": "PASSED",
+        "geometry": "PASSED",
+        "metrics": "PASSED"
+      },
+      "comparison": {
+        "original_area_ha": 758.0585,
+        "reproduced_area_ha": 758.0585,
+        "original_gate_decision": "QUALIFY",
+        "reproduced_gate_decision": "qualify"
+      }
+    },
+    "aoi_importer": {
+      "status": "PASSED",
+      "area_ha": 11763.0228,
+      "perimeter_m": 43391.85
+    }
+  },
+  "remaining_limitations": [
+    "ChangeNet running with untrained baseline weights; training pipeline available in backend/models/change/train_levir.py.",
+    "GeoChat-7B checkpoint requires 4.5 GB VRAM; running verified classical spectral-spatial fallback.",
+    "SAR corroboration operates at Level 2 deterministic spatial consensus; joint latent fusion requires aligned foundation pretraining."
+  ]
+}
