@@ -259,6 +259,46 @@ export const InteractiveEarthViewer: React.FC<InteractiveEarthViewerProps> = ({
     });
   }, [ws.currentMission?.lat, ws.currentMission?.lon]);
 
+  // Listen to ws.zoom and adjust map zoom level dynamically
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+    const targetZoom = Math.round(14 + (ws.zoom - 1) * 3);
+    const current = mapInstanceRef.current.getZoom();
+    if (Math.abs(current - targetZoom) >= 1) {
+      mapInstanceRef.current.setZoom(targetZoom);
+    }
+  }, [ws.zoom]);
+
+  // Listen to selectedClusterId and fly to evidence cluster
+  useEffect(() => {
+    if (!mapInstanceRef.current || !selectedClusterId) return;
+    const c = clusters.find((item) => item.id === selectedClusterId);
+    if (c?.center) {
+      mapInstanceRef.current.flyTo([c.center.lat, c.center.lon], 16, {
+        duration: 1.2,
+        easeLinearity: 0.25,
+      });
+    }
+  }, [selectedClusterId, clusters]);
+
+  // Switch Basemap Tiles Dynamically
+  useEffect(() => {
+    if (!t2TileLayerRef.current) return;
+    let url = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+    if (activeBasemap === 'sentinel') {
+      url = 'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg';
+    } else if (activeBasemap === 'osm') {
+      url = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+    }
+    t2TileLayerRef.current.setUrl(url);
+  }, [activeBasemap]);
+
+  // Toggle Cartographic Reference Labels
+  useEffect(() => {
+    if (!labelsLayerRef.current) return;
+    labelsLayerRef.current.setOpacity(isLabelsVisible ? 0.85 : 0);
+  }, [isLabelsVisible]);
+
   // Synchronize Swipe Divider Clipping on T1 Pane
   useEffect(() => {
     if (!mapInstanceRef.current) return;
@@ -597,8 +637,8 @@ export const InteractiveEarthViewer: React.FC<InteractiveEarthViewerProps> = ({
         </div>
       )}
 
-      {/* 3. Three Map Modes Selector (EXPLORE · OBSERVE · ANALYZE) */}
-      <div className="absolute top-3 left-14 z-20 flex items-center gap-1 p-1 rounded-md bg-[#121212]/90 backdrop-blur-md border border-white/10 shadow-lg text-[11px] font-mono text-neutral-400">
+      {/* 3. Three Map Modes Selector (EXPLORE · OBSERVE · ANALYZE) - Centered Top */}
+      <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 p-1 rounded-md bg-[#121212]/90 backdrop-blur-md border border-white/10 shadow-lg text-[11px] font-mono text-neutral-400">
         <button
           onClick={() => {
             setMapMode('EXPLORE');
@@ -646,6 +686,65 @@ export const InteractiveEarthViewer: React.FC<InteractiveEarthViewerProps> = ({
           ANALYZE
         </button>
       </div>
+
+      {/* Basemap & Reference Labels Selector (Top Right) */}
+      <div className="absolute top-3 right-5 z-20 hidden md:flex items-center gap-1.5 p-1 rounded-md bg-[#121212]/90 backdrop-blur-md border border-white/10 shadow-lg text-[10px] font-mono text-neutral-400">
+        <span className="text-[9px] uppercase text-neutral-500 font-bold px-1">BASEMAP:</span>
+        <button
+          onClick={() => setActiveBasemap('esri')}
+          className={`px-2 py-0.5 rounded transition-colors ${
+            activeBasemap === 'esri' ? 'bg-white text-black font-bold' : 'hover:text-white hover:bg-neutral-800'
+          }`}
+          title="ESRI High-Resolution World Satellite Imagery"
+        >
+          ESRI
+        </button>
+        <button
+          onClick={() => setActiveBasemap('sentinel')}
+          className={`px-2 py-0.5 rounded transition-colors ${
+            activeBasemap === 'sentinel' ? 'bg-white text-black font-bold' : 'hover:text-white hover:bg-neutral-800'
+          }`}
+          title="Sentinel-2 Cloudless Worldwide Mosaic"
+        >
+          S2
+        </button>
+        <button
+          onClick={() => setActiveBasemap('osm')}
+          className={`px-2 py-0.5 rounded transition-colors ${
+            activeBasemap === 'osm' ? 'bg-white text-black font-bold' : 'hover:text-white hover:bg-neutral-800'
+          }`}
+          title="OpenStreetMap Cartographic Basemap"
+        >
+          OSM
+        </button>
+        <div className="w-px h-3 bg-neutral-800 mx-0.5" />
+        <button
+          onClick={() => setIsLabelsVisible(!isLabelsVisible)}
+          className={`px-2 py-0.5 rounded transition-colors ${
+            isLabelsVisible ? 'bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30' : 'text-neutral-500 hover:text-white'
+          }`}
+          title="Toggle Reference City & Road Labels"
+        >
+          LABELS {isLabelsVisible ? 'ON' : 'OFF'}
+        </button>
+      </div>
+
+      {/* Coordinate Grid Overlay */}
+      {ws.overlays.grid && (
+        <div className="absolute inset-0 pointer-events-none z-10 opacity-40">
+          <svg className="w-full h-full">
+            <defs>
+              <pattern id="grid-pattern" width="80" height="80" patternUnits="userSpaceOnUse">
+                <path d="M 80 0 L 0 0 0 80" fill="none" stroke="rgba(16, 185, 129, 0.4)" strokeWidth="0.75" strokeDasharray="3,3" />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#grid-pattern)" />
+          </svg>
+          <div className="absolute bottom-12 right-4 text-[9px] font-mono text-emerald-400 bg-black/70 px-2 py-0.5 rounded border border-emerald-500/40">
+            WGS84 / UTM 100m GRID ACTIVE
+          </div>
+        </div>
+      )}
 
       {/* 4. Active Lens Metadata Strip & Spectral Legend */}
       <div className="absolute top-14 left-14 z-20 flex items-center gap-2 pointer-events-none">
