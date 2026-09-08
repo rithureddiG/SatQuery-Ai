@@ -23,7 +23,7 @@ export const MetricBlock: React.FC<MetricBlockProps> = ({
   const calibratedEce =
     propCalibratedEce !== undefined ? propCalibratedEce : ws.evidenceScore;
   const calibrationMethod =
-    propCalibrationMethod || 'Platt Scaled Concordance';
+    propCalibrationMethod || (ws.isRealWeights ? 'Calibrated Model Posterior' : 'Deterministic Concordance');
 
   return (
     <div className="grid grid-cols-2 gap-3 select-none">

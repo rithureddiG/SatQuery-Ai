@@ -87,6 +87,8 @@ export interface ChangeCluster {
   confidence: number;
   center: { lat: number; lon: number };
   bbox: { xmin: number; ymin: number; xmax: number; ymax: number };
+  geometry?: any;
+  source_image_id?: string;
 }
 
 export interface EvidenceLayerItem {
@@ -1401,18 +1403,29 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
       }, 380);
 
       try {
-        const canonicalTargetIds =
-          images.length > 0
-            ? images.map((img) => img.id)
-            : ['img_demo_bitemporal_t1', 'img_demo_bitemporal_t2', 'img_demo_sentinel1_sar'];
+        const activeSourceImageId =
+          images.find((img) => img.id.includes('flood') || img.id.includes('water'))?.id ||
+          (images.length > 0 ? images[0].id : (currentMission.id === 'mission_02_grounding' ? 'img_demo_brahmaputra_flood' : 'img_demo_bitemporal_t2'));
 
         const res = await executeAgentQuery(q, canonicalTargetIds, undefined, {
           lat: currentMission.lat,
           lon: currentMission.lon,
           location_name: currentMission.name,
           utm_zone: currentMission.utmZone,
+          expected_source_image_id: activeSourceImageId,
+          source_image_id: activeSourceImageId,
         });
         setAgentResult(res);
+
+        // Enforce hard source-image invariant: Suppress rendering if mismatched
+        if (res?.error_code === 'ANALYSIS_INVALID' || (res?.status === 'error' && res?.reason?.includes('Source image mismatch'))) {
+          setClusters([]);
+          setSelectedClusterId(null);
+          setCustomInsight(`⚠️ ANALYSIS_INVALID: ${res?.reason || 'Source image mismatch. Result suppressed.'}`);
+          setFindingTitle('Analysis Suppressed (Source Invariant Mismatch)');
+          setIsAnalyzing(false);
+          return;
+        }
 
         if (res?.pipeline_result?.is_real_weights) {
           setIsRealWeights(true);
@@ -1437,6 +1450,9 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
           setActiveLens('True Color');
         } else if (res?.task === 'visual_grounding') {
           setFindingTitle('Target region grounded');
+          setActiveLens('EVIDENCE');
+        } else if (res?.task === 'spatial_ranking') {
+          setFindingTitle(res.answer ? res.answer.split('.')[0] : 'Largest Geographic Entity Ranked');
           setActiveLens('EVIDENCE');
         } else {
           setFindingTitle('Built-up area increased');
@@ -1510,12 +1526,16 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
             return {
               id: f.id || `CLUSTER_${idx + 1}`,
               tag: String(idx + 1).padStart(2, '0'),
-              label: f.properties?.label || `Cluster ${String.fromCharCode(65 + idx)}: Altered Surface`,
+              label:
+                f.properties?.label ||
+                (f.properties?.rank
+                  ? `Rank #${f.properties.rank}: ${f.properties?.target || 'Entity'}`
+                  : `Cluster ${String.fromCharCode(65 + idx)}: Altered Surface`),
               area_m2: f.properties?.area_m2 || 0,
               area_ha:
                 f.properties?.area_ha ||
                 (f.properties?.area_m2 ? +(f.properties.area_m2 / 10000).toFixed(2) : 0),
-              confidence: f.properties?.confidence || 0.92,
+              confidence: f.properties?.confidence ?? (res?.confidence_score ?? 0.88),
               center: { lat: cLat, lon: cLon },
               bbox: f.properties?.bbox_normalized || {
                 xmin: 0.35 + idx * 0.2,
@@ -1523,6 +1543,8 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
                 xmax: 0.52 + idx * 0.2,
                 ymax: 0.52 + idx * 0.2,
               },
+              geometry: f.geometry,
+              source_image_id: f.properties?.source_image_id || res?.source_image_id || activeSourceImageId,
             };
           });
           setClusters(newClusters);

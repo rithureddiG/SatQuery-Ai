@@ -33,16 +33,26 @@ export const FloatingFindingSurface: React.FC<FloatingFindingSurfaceProps> = ({
   const areaHa = finding ? `${finding.spatial.area_ha.toFixed(2)} ha` : ws.totalAreaHa || '18.4 ha';
   const areaM2 = finding ? `${finding.spatial.area_m2.toLocaleString()} m²` : ws.totalAreaM2 || '184,600 m²';
 
-  const opticalStatus = 'strong (0.88)';
-  const sarStatus = 'supporting (0.64)';
-  const regStatus = 'verified (0.3 px RMSE)';
-  const evidenceStrength = 'Strong · Decision: QUALIFY';
+  const opticalScore = ws.corroborationMetrics?.opticalScore ?? 88;
+  const sarScore = ws.corroborationMetrics?.sarScore ?? 64;
+  const regScore = ws.corroborationMetrics?.registrationScore ?? 95;
+
+  const method =
+    (ws.agentResult as any)?.pipeline_result?.method ||
+    finding?.algorithm ||
+    (ws.isRealWeights ? 'Neural Spatial Inference' : 'Deterministic Geospatial');
+
+  const execMode = ws.isRealWeights
+    ? 'REAL CHECKPOINT'
+    : ((ws.agentResult as any)?.fallback_used || ws.executionMode === 'DEMO / CLASSICAL CV'
+        ? 'DETERMINISTIC FALLBACK'
+        : ws.executionMode);
 
   const reliabilityFactors = [
-    { label: 'Registration quality', score: 92 },
-    { label: 'Spatial overlap', score: 90 },
+    { label: 'Registration quality', score: regScore },
+    { label: 'Spatial overlap', score: Math.min(100, Math.max(70, Math.round(opticalScore * 0.95))) },
     { label: 'Cloud contamination', score: 100 },
-    { label: 'Sensor agreement', score: 64 },
+    { label: 'Sensor agreement', score: sarScore },
     { label: 'GSD suitability', score: 100 },
   ];
 
@@ -95,8 +105,13 @@ export const FloatingFindingSurface: React.FC<FloatingFindingSurfaceProps> = ({
         <div className="flex items-center justify-between">
           <span className="text-neutral-400">Optical evidence</span>
           <div className="flex items-center gap-2">
-            <span className="text-emerald-400 text-[10px]">█████████░</span>
-            <span className="text-neutral-200 text-[10px] font-semibold">strong</span>
+            <span className="text-emerald-400 text-[10px]">
+              {'█'.repeat(Math.round(opticalScore / 10))}
+              {'░'.repeat(10 - Math.round(opticalScore / 10))}
+            </span>
+            <span className="text-neutral-200 text-[10px] font-semibold">
+              {opticalScore >= 80 ? 'strong' : 'moderate'} ({opticalScore}%)
+            </span>
           </div>
         </div>
 
@@ -104,8 +119,13 @@ export const FloatingFindingSurface: React.FC<FloatingFindingSurfaceProps> = ({
         <div className="flex items-center justify-between">
           <span className="text-neutral-400">SAR corroboration</span>
           <div className="flex items-center gap-2">
-            <span className="text-cyan-400 text-[10px]">████████░░</span>
-            <span className="text-neutral-200 text-[10px] font-semibold">supporting</span>
+            <span className="text-cyan-400 text-[10px]">
+              {'█'.repeat(Math.round(sarScore / 10))}
+              {'░'.repeat(10 - Math.round(sarScore / 10))}
+            </span>
+            <span className="text-neutral-200 text-[10px] font-semibold">
+              {sarScore >= 70 ? 'supporting' : 'baseline'} ({sarScore}%)
+            </span>
           </div>
         </div>
 
@@ -114,7 +134,7 @@ export const FloatingFindingSurface: React.FC<FloatingFindingSurfaceProps> = ({
           <span className="text-neutral-400">Registration</span>
           <div className="flex items-center gap-1.5 text-emerald-400 text-[10px] font-bold">
             <CheckCircle2 className="w-3 h-3" />
-            <span>verified</span>
+            <span>verified ({regScore}%)</span>
           </div>
         </div>
       </div>
@@ -166,15 +186,17 @@ export const FloatingFindingSurface: React.FC<FloatingFindingSurfaceProps> = ({
           <div className="bg-neutral-900/90 p-2.5 rounded-lg border border-white/10 space-y-1">
             <div className="flex items-center justify-between">
               <span className="text-neutral-500">EXECUTION MODE</span>
-              <span className="text-amber-400 font-bold">classical_fallback</span>
+              <span className={ws.isRealWeights ? "text-emerald-400 font-bold" : "text-amber-400 font-bold"}>
+                {execMode}
+              </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-neutral-500">METHOD</span>
-              <span className="text-neutral-200">ChangeNet + Lee 5x5</span>
+              <span className="text-neutral-200">{method}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-neutral-500">PROVENANCE</span>
-              <span className="text-neutral-200">7-stage verifiable DAG</span>
+              <span className="text-neutral-200">Verifiable DAG & Sha256 Registry</span>
             </div>
           </div>
 

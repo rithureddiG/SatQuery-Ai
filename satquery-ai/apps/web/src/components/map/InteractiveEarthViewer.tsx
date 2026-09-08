@@ -394,25 +394,47 @@ export const InteractiveEarthViewer: React.FC<InteractiveEarthViewerProps> = ({
       if (!shouldShowClusters) return;
 
       clusters.forEach((cluster) => {
+        // Enforce hard source-image invariant: strictly suppress invalid or mismatched clusters
+        if (cluster.source_image_id && cluster.source_image_id.includes('ANALYSIS_INVALID')) {
+          return;
+        }
+
         const isSelected = selectedClusterId === cluster.id;
         const centerLat = cluster.center.lat;
         const centerLon = cluster.center.lon;
         const delta = 0.0035;
 
-        const bounds: [[number, number], [number, number]] = [
-          [centerLat - delta, centerLon - delta * 1.4],
-          [centerLat + delta, centerLon + delta * 1.4],
-        ];
+        let layer: any;
+        const hasRealPolygon =
+          cluster.geometry &&
+          (cluster.geometry.type === 'Polygon' || cluster.geometry.type === 'MultiPolygon');
 
-        const polygon = L.rectangle(bounds, {
-          color: isSelected ? '#10B981' : '#F59E0B',
-          weight: isSelected ? 3 : 1.8,
-          fillColor: isSelected ? '#10B981' : '#EF4444',
-          fillOpacity: isSelected ? 0.35 : 0.22,
-          dashArray: isSelected ? undefined : '4, 4',
-        });
+        if (hasRealPolygon) {
+          layer = L.geoJSON(cluster.geometry, {
+            style: {
+              color: isSelected ? '#10B981' : '#0284C7',
+              weight: isSelected ? 3 : 2,
+              fillColor: isSelected ? '#10B981' : '#0EA5E9',
+              fillOpacity: isSelected ? 0.45 : 0.28,
+              dashArray: isSelected ? undefined : '3, 3',
+            },
+          });
+        } else {
+          const bounds: [[number, number], [number, number]] = [
+            [centerLat - delta, centerLon - delta * 1.4],
+            [centerLat + delta, centerLon + delta * 1.4],
+          ];
 
-        polygon.on('click', (e: any) => {
+          layer = L.rectangle(bounds, {
+            color: isSelected ? '#10B981' : '#F59E0B',
+            weight: isSelected ? 3 : 1.8,
+            fillColor: isSelected ? '#10B981' : '#EF4444',
+            fillOpacity: isSelected ? 0.35 : 0.22,
+            dashArray: isSelected ? undefined : '4, 4',
+          });
+        }
+
+        layer.on('click', (e: any) => {
           L.DomEvent.stopPropagation(e);
           onSelectCluster(cluster.id);
         });
@@ -425,13 +447,25 @@ export const InteractiveEarthViewer: React.FC<InteractiveEarthViewerProps> = ({
           </div>
         `;
 
-        polygon.bindTooltip(tooltipContent, {
+        layer.bindTooltip(tooltipContent, {
           permanent: false,
           direction: 'top',
           className: 'satquery-leaflet-tooltip',
         });
 
-        clustersGroupRef.current.addLayer(polygon);
+        clustersGroupRef.current.addLayer(layer);
+
+        // Auto-center on selected genuine polygon
+        if (isSelected && hasRealPolygon && mapInstanceRef.current) {
+          try {
+            const b = layer.getBounds();
+            if (b && b.isValid()) {
+              mapInstanceRef.current.fitBounds(b, { padding: [50, 50], maxZoom: 16 });
+            }
+          } catch {
+            // Ignore boundary calculation errors
+          }
+        }
       });
     });
   }, [clusters, selectedClusterId, activeLens, mapMode]);
