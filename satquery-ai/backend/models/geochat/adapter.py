@@ -153,14 +153,32 @@ class GeoChatAdapter:
                 from PIL import Image
                 pil_img = Image.open(img_p).convert("RGB")
 
+                # In GeoChat/LLaVA, pass image tensor if processor or vision tower available
+                image_tensor = None
+                if self._processor is not None:
+                    image_tensor = self._processor(images=pil_img, return_tensors="pt")["pixel_values"]
+                elif hasattr(self._model, "get_vision_tower"):
+                    try:
+                        from transformers import CLIPImageProcessor
+                        processor = CLIPImageProcessor.from_pretrained("openai/clip-vit-large-patch14-336")
+                        image_tensor = processor(images=pil_img, return_tensors="pt")["pixel_values"]
+                    except Exception:
+                        pass
+
                 prompt = f"{GEOCHAT_SYSTEM_PROMPT}\n<image>\nQuestion: {question}\nAnswer:"
                 inputs = self._tokenizer(prompt, return_tensors="pt")
                 if hasattr(inputs, "to") and self._device.startswith("cuda"):
                     inputs = {k: v.to(self._device) for k, v in inputs.items()}
 
+                kwargs = dict(**inputs)
+                if image_tensor is not None:
+                    if self._device.startswith("cuda"):
+                        image_tensor = image_tensor.to(self._device)
+                    kwargs["images"] = image_tensor
+
                 with torch.inference_mode():
                     output_ids = self._model.generate(
-                        **inputs,
+                        **kwargs,
                         max_new_tokens=256,
                         do_sample=False,
                         temperature=0.0,
@@ -172,7 +190,7 @@ class GeoChatAdapter:
 
                 return {
                     "answer": generated_text,
-                    "model_confidence": 0.90,
+                    "model_confidence": 0.90 if generated_text else None,
                     "model_name": "GeoChat-7B",
                     "model_version": "v1.0-4bit",
                     "weights_available": True,
@@ -193,19 +211,20 @@ class GeoChatAdapter:
                 "Download checkpoint via 'python scripts/download_geochat.py'."
             )
 
-        # Explicit fallback when in development/offline mode
+        # Zero fabrication: Explicit fallback when in development/offline mode
         return {
             "answer": (
-                f"[Development / Offline Mode] Scene analysis for query '{question}' on '{img_p.name}'. "
-                "GeoChat-7B architecture configured in 4-bit mode."
+                f"[Offline Fallback] Scene analysis for query '{question}' on '{img_p.name}'. "
+                "GeoChat-7B checkpoint unavailable; classical spectral analysis active."
             ),
-            "model_confidence": 0.85,
+            "model_confidence": None,
             "model_name": "GeoChat-7B",
             "model_version": "v1.0-4bit",
             "weights_available": self.is_checkpoint_available(),
             "is_real_weights": False,
             "fallback_used": True,
             "execution_mode": "offline_fallback",
+            "status": "model_unavailable",
             "device": self._device,
             "quantization": "4-bit NF4",
             "checkpoint_path": str(self.config.checkpoint_dir),
@@ -223,14 +242,32 @@ class GeoChatAdapter:
                 from PIL import Image
                 pil_img = Image.open(img_p).convert("RGB")
 
+                # In GeoChat/LLaVA, pass image tensor if processor or vision tower available
+                image_tensor = None
+                if self._processor is not None:
+                    image_tensor = self._processor(images=pil_img, return_tensors="pt")["pixel_values"]
+                elif hasattr(self._model, "get_vision_tower"):
+                    try:
+                        from transformers import CLIPImageProcessor
+                        processor = CLIPImageProcessor.from_pretrained("openai/clip-vit-large-patch14-336")
+                        image_tensor = processor(images=pil_img, return_tensors="pt")["pixel_values"]
+                    except Exception:
+                        pass
+
                 prompt = f"{GEOCHAT_GROUNDING_PROMPT}\n<image>\nLocate: {referring_expression}\nCoordinates:"
                 inputs = self._tokenizer(prompt, return_tensors="pt")
                 if hasattr(inputs, "to") and self._device.startswith("cuda"):
                     inputs = {k: v.to(self._device) for k, v in inputs.items()}
 
+                kwargs = dict(**inputs)
+                if image_tensor is not None:
+                    if self._device.startswith("cuda"):
+                        image_tensor = image_tensor.to(self._device)
+                    kwargs["images"] = image_tensor
+
                 with torch.inference_mode():
                     output_ids = self._model.generate(
-                        **inputs,
+                        **kwargs,
                         max_new_tokens=128,
                         do_sample=False,
                     )
@@ -243,7 +280,7 @@ class GeoChatAdapter:
                 return {
                     "boxes": parsed_boxes,
                     "raw_output": generated_text,
-                    "model_confidence": 0.89 if parsed_boxes else 0.50,
+                    "model_confidence": 0.89 if parsed_boxes else None,
                     "model_name": "GeoChat-7B",
                     "model_version": "v1.0-4bit",
                     "weights_available": True,
@@ -263,23 +300,18 @@ class GeoChatAdapter:
                 f"Real mode active but GeoChat-7B weights not found at {self.config.checkpoint_dir}."
             )
 
-        boxes = []
-        if any(w in referring_expression.lower() for w in ["water", "lake", "river", "reservoir"]):
-            boxes.append({"ymin": 0.20, "xmin": 0.30, "ymax": 0.65, "xmax": 0.75})
-        elif any(b in referring_expression.lower() for b in ["building", "urban", "structure", "industrial"]):
-            boxes.append({"ymin": 0.15, "xmin": 0.15, "ymax": 0.45, "xmax": 0.50})
-        else:
-            boxes.append({"ymin": 0.25, "xmin": 0.25, "ymax": 0.75, "xmax": 0.75})
-
+        # ZERO FABRICATION: Do NOT invent hardcoded bounding boxes or fake confidence
         return {
-            "boxes": boxes,
-            "model_confidence": 0.85,
+            "boxes": [],
+            "raw_output": "[Offline Fallback] GeoChat-7B checkpoint unavailable. No synthetic boxes generated.",
+            "model_confidence": None,
             "model_name": "GeoChat-7B",
             "model_version": "v1.0-4bit",
             "weights_available": self.is_checkpoint_available(),
             "is_real_weights": False,
             "fallback_used": True,
             "execution_mode": "offline_fallback",
+            "status": "model_unavailable",
             "device": self._device,
             "quantization": "4-bit NF4",
             "checkpoint_path": str(self.config.checkpoint_dir),
