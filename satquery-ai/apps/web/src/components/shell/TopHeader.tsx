@@ -129,29 +129,39 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
 
         <span className="w-px h-4 bg-[#E6E6E1]" />
 
-        {/* Unified System State Indicator */}
-        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[#FAF9F7] border border-[#E6E6E1] text-[11px] font-mono font-medium">
-          {ws.systemState === 'ANALYZING' ? (
-            <>
-              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-              <span className="text-amber-800 font-bold">ANALYZING</span>
-            </>
-          ) : ws.systemState === 'VERIFIED' ? (
-            <>
-              <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)]" />
-              <span className="text-emerald-800 font-bold">VERIFIED</span>
-            </>
-          ) : ws.systemState === 'OFFLINE' ? (
-            <>
-              <span className="w-2 h-2 rounded-full bg-zinc-400" />
-              <span className="text-zinc-600">OFFLINE</span>
-            </>
-          ) : (
-            <>
-              <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]" />
-              <span className="text-[#111111] font-semibold">READY</span>
-            </>
-          )}
+        {/* Execution Mode & Unified System State Indicators */}
+        <div className="flex items-center gap-2">
+          <span className={`px-2.5 py-1 rounded-full text-[10px] font-mono font-bold tracking-wider uppercase border ${
+            ws.executionMode === 'REAL CHECKPOINTS'
+              ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+              : 'bg-amber-50 text-amber-900 border-amber-300'
+          }`}>
+            {ws.executionMode}
+          </span>
+
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[#FAF9F7] border border-[#E6E6E1] text-[11px] font-mono font-medium">
+            {ws.systemState === 'ANALYZING' ? (
+              <>
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                <span className="text-amber-800 font-bold">ANALYZING</span>
+              </>
+            ) : ws.systemState === 'VERIFIED' ? (
+              <>
+                <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)]" />
+                <span className="text-emerald-800 font-bold">VERIFIED</span>
+              </>
+            ) : ws.systemState === 'OFFLINE' ? (
+              <>
+                <span className="w-2 h-2 rounded-full bg-zinc-400" />
+                <span className="text-zinc-600">OFFLINE</span>
+              </>
+            ) : (
+              <>
+                <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]" />
+                <span className="text-[#111111] font-semibold">READY</span>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </header>

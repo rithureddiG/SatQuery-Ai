@@ -4,7 +4,10 @@ import pytest
 from pathlib import Path
 from backend.db import get_db, Base, engine
 from backend.models_db import ImageRecord
-from backend.pipelines.golden_mission import run_urban_expansion_golden_mission
+from backend.pipelines.golden_mission import (
+    run_urban_expansion_golden_mission,
+    run_complete_compound_golden_mission,
+)
 
 
 def test_urban_expansion_golden_mission_flow():
@@ -65,3 +68,33 @@ def test_urban_expansion_golden_mission_flow():
     assert "spatial_evidence" in result
     assert len(result["evidence_contract"]["provenance_steps"]) == 5
     print(f"\n✅ Golden Mission Passed: {result['answer']}")
+
+
+def test_complete_compound_golden_mission_flow():
+    Base.metadata.create_all(bind=engine)
+    db = next(get_db())
+
+    # Ensure demo data seeded
+    from scripts.seed_demo_data import seed_demo_scenarios
+    seed_demo_scenarios()
+
+    result = run_complete_compound_golden_mission(
+        image_t1_optical_id="img_demo_bitemporal_t1",
+        image_t2_optical_id="img_demo_bitemporal_t2",
+        image_t2_sar_id="img_demo_sentinel1_sar",
+        query="Between T1 and T2, identify newly developed built-up areas, calculate ground area affected, and corroborate with Sentinel-1 SAR.",
+        db=db,
+    )
+
+    assert "mission_id" in result
+    assert "sar_corroboration" in result
+    assert "spatial_iou" in result["sar_corroboration"]
+    assert "agreement_ratio" in result["sar_corroboration"]
+    assert "spatial_evidence" in result
+    assert "timeline" in result
+    assert len(result["timeline"]) >= 10
+    assert "evidence_gate" in result
+    assert result["evidence_gate"]["decision"] in ["answer", "qualify", "abstain"]
+    assert "report_urls" in result
+    assert "pdf" in result["report_urls"]
+    print(f"\n✅ Complete Compound Mission Passed: {result['answer']}")

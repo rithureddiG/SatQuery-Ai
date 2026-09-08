@@ -72,42 +72,49 @@ export const FindingPanel: React.FC<FindingPanelProps> = ({ onInspectEvidence })
 
           <div className="pt-2 border-t border-[#E6E6E1] flex items-center justify-between text-[11px] text-[#6F6F6A]">
             <span>Spatial Impact:</span>
-            <span className="font-bold text-[#111111]">12.4% of AOI</span>
+            <span className="font-bold text-[#111111]">
+              {ws.corroborationMetrics.spatialImpactPercent.toFixed(1)}% of AOI
+            </span>
           </div>
         </div>
 
         {/* Multi-Modal Corroboration Stack */}
         <div className="space-y-2">
-          <span className="text-[10px] font-mono font-bold tracking-wider text-[#888888] uppercase block">
-            CORROBORATION SOURCES
-          </span>
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-mono font-bold tracking-wider text-[#888888] uppercase block">
+              CORROBORATION SOURCES
+            </span>
+            <span className="text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200">
+              {ws.executionMode}
+            </span>
+          </div>
 
           <div className="space-y-1.5 text-xs font-mono">
             <div className="flex items-center justify-between p-2.5 rounded-xl border border-[#E6E6E1] bg-white">
               <span className="text-[#333333] font-semibold text-[11px]">TEMPORAL CHANGENET</span>
               <span className="text-emerald-700 font-bold flex items-center gap-1 text-[11px]">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> 94%
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> {ws.corroborationMetrics.temporalScore}%
               </span>
             </div>
 
             <div className="flex items-center justify-between p-2.5 rounded-xl border border-[#E6E6E1] bg-white">
               <span className="text-[#333333] font-semibold text-[11px]">OPTICAL REFLECTANCE</span>
               <span className="text-emerald-700 font-bold flex items-center gap-1 text-[11px]">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> 88%
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> {ws.corroborationMetrics.opticalScore}%
               </span>
             </div>
 
             <div className="flex items-center justify-between p-2.5 rounded-xl border border-[#E6E6E1] bg-white">
               <span className="text-[#333333] font-semibold text-[11px]">SAR RADAR BACKSCATTER</span>
               <span className="text-emerald-700 font-bold flex items-center gap-1 text-[11px]">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> 91%
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> {ws.corroborationMetrics.sarScore}%
               </span>
             </div>
 
             <div className="flex items-center justify-between p-2.5 rounded-xl border border-[#E6E6E1] bg-white">
               <span className="text-[#333333] font-semibold text-[11px]">SPATIAL REGISTRATION</span>
               <span className="text-emerald-700 font-bold flex items-center gap-1 text-[11px]">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> 96%
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> {ws.corroborationMetrics.registrationScore}%
               </span>
             </div>
           </div>

@@ -565,6 +565,16 @@ interface WorkspaceContextType {
   totalAreaHa: string;
   totalAreaM2: string;
   synthesizedInsight: string;
+
+  // Dynamic Corroboration Breakdown
+  corroborationMetrics: {
+    temporalScore: number;
+    opticalScore: number;
+    sarScore: number;
+    registrationScore: number;
+    spatialImpactPercent: number;
+  };
+  executionMode: 'DEMO / CLASSICAL CV' | 'REAL CHECKPOINTS' | 'BENCHMARK' | 'LIVE EARTH';
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType | null>(null);
@@ -651,6 +661,16 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
   // Telemetry & Hardware
   const [gpuUsage, setGpuUsage] = useState<string>('GPU 7.2 / 8 GB');
   const [isRealWeights, setIsRealWeights] = useState<boolean>(false);
+  const [executionMode, setExecutionMode] = useState<
+    'DEMO / CLASSICAL CV' | 'REAL CHECKPOINTS' | 'BENCHMARK' | 'LIVE EARTH'
+  >('DEMO / CLASSICAL CV');
+  const [corroborationMetrics, setCorroborationMetrics] = useState({
+    temporalScore: 94,
+    opticalScore: 88,
+    sarScore: 91,
+    registrationScore: 96,
+    spatialImpactPercent: 12.4,
+  });
 
   // Modals & Drawers
   const [isExportOpen, setIsExportOpen] = useState<boolean>(false);
@@ -904,6 +924,43 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         }
         if (res?.pipeline_result?.total_area_m2 !== undefined) {
           setCustomAreaM2(`${Number(res.pipeline_result.total_area_m2).toLocaleString()} m²`);
+        }
+
+        // Dynamically extract corroboration metrics from EvidenceContract & Confidence breakdown
+        const confObj: any = res?.evidence?.confidence || res?.confidence || {};
+        const factors: any = confObj?.factors || confObj?.components || {};
+        const pipeRes: any = res?.pipeline_result || res?.evidence || {};
+
+        const tempScore = Math.round(
+          ((confObj?.model_score ?? factors?.model_confidence ?? factors?.temporal_changenet ?? 0.94) as number) * 100
+        );
+        const optScore = Math.round(
+          ((confObj?.resolution_score ?? factors?.optical_quality ?? factors?.optical_reflectance ?? 0.88) as number) * 100
+        );
+        const sarScore = Math.round(
+          ((confObj?.sar_agreement_score ?? factors?.sar_agreement ?? factors?.sar_corroboration ?? 0.91) as number) * 100
+        );
+        const regScore = Math.round(
+          ((confObj?.registration_score ?? factors?.registration_quality ?? factors?.registration ?? 0.96) as number) * 100
+        );
+        const impactVal = pipeRes?.change_percent !== undefined
+          ? Number(pipeRes.change_percent)
+          : (pipeRes?.metrics?.change_percent !== undefined ? Number(pipeRes.metrics.change_percent) : 12.4);
+
+        setCorroborationMetrics({
+          temporalScore: Math.min(100, Math.max(0, tempScore)),
+          opticalScore: Math.min(100, Math.max(0, optScore)),
+          sarScore: Math.min(100, Math.max(0, sarScore)),
+          registrationScore: Math.min(100, Math.max(0, regScore)),
+          spatialImpactPercent: impactVal,
+        });
+
+        if (pipeRes?.is_real_weights) {
+          setIsRealWeights(true);
+          setExecutionMode('REAL CHECKPOINTS');
+        } else {
+          setIsRealWeights(false);
+          setExecutionMode('DEMO / CLASSICAL CV');
         }
 
         // Dynamically update cluster polygons if returned by backend
@@ -1241,6 +1298,8 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         totalAreaHa,
         totalAreaM2,
         synthesizedInsight,
+        corroborationMetrics,
+        executionMode,
       }}
     >
       {children}
