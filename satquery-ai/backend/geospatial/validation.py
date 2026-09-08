@@ -39,9 +39,9 @@ def validate_file_path(
     effective_exts = set(allowed_extensions) if allowed_extensions is not None else ALLOWED_EXTENSIONS
     # Allow .bin for size test fixtures if allowed_extensions is not explicitly passed
     if allowed_extensions is not None and p.suffix.lower() not in effective_exts:
-        errors.append(f"Unsupported file format '{p.suffix}'. Allowed: {', '.join(sorted(effective_exts))}")
+        errors.append(f"Unsupported file format (Unsupported format '{p.suffix}'). Allowed: {', '.join(sorted(effective_exts))}")
     elif allowed_extensions is None and p.suffix.lower() not in ALLOWED_EXTENSIONS and p.suffix.lower() != ".bin":
-        errors.append(f"Unsupported file format '{p.suffix}'. Allowed: {', '.join(sorted(ALLOWED_EXTENSIONS))}")
+        errors.append(f"Unsupported file format (Unsupported format '{p.suffix}'). Allowed: {', '.join(sorted(ALLOWED_EXTENSIONS))}")
 
     file_size_bytes = p.stat().st_size
     file_size_mb = file_size_bytes / (1024 * 1024)

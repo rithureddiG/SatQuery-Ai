@@ -34,9 +34,9 @@ def test_seed_demo_scenarios_and_evaluation_endpoint():
     # 3. Test Evaluation Benchmarks List endpoint
     bench_resp = client.get("/api/v1/evaluation/benchmarks")
     assert bench_resp.status_code == 200
-    assert len(bench_resp.json()["available_benchmarks"]) == 4
+    assert len(bench_resp.json()["available_benchmarks"]) == 5
 
     # 4. Test Evaluation Run endpoint
     run_resp = client.post("/api/v1/evaluation/run")
     assert run_resp.status_code == 200
-    assert len(run_resp.json()["benchmarks"]) == 4
+    assert len(run_resp.json()["benchmarks"]) == 5

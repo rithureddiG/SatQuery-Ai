@@ -35,6 +35,12 @@ def list_benchmarks():
                 "task": "Optical + SAR Multimodal Corroboration",
                 "metric": "Cross-Modal Agreement (%) / Macro F1",
             },
+            {
+                "id": "calibration",
+                "name": "Confidence Probability Calibration (Platt / ECE)",
+                "task": "Expected Calibration Error & Reliability Assessment",
+                "metric": "ECE (%) / Brier Score",
+            },
         ]
     }
 

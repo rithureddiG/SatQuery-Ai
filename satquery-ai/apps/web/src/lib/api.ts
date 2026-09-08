@@ -186,3 +186,103 @@ export function getReportDownloadUrl(endpoint: string): string {
   if (endpoint.startsWith('http')) return endpoint;
   return `${API_BASE}${endpoint}`;
 }
+
+export async function pixelInspect(
+  imageId: string,
+  lat: number,
+  lon: number,
+  compareImageId?: string
+): Promise<any> {
+  const res = await fetch(`${API_BASE}/api/v1/images/${imageId}/pixel-inspect`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ lat, lon, compare_image_id: compareImageId }),
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Pixel inspect failed: ${errText}`);
+  }
+  return await res.json();
+}
+
+export async function computeZonalStats(
+  imageId: string,
+  geometry: any,
+  bandIndex: number = 1
+): Promise<any> {
+  const res = await fetch(`${API_BASE}/api/v1/images/${imageId}/zonal-stats`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ geometry, band_index: bandIndex }),
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Zonal stats failed: ${errText}`);
+  }
+  return await res.json();
+}
+
+export async function uploadAOIFile(file: File, name?: string): Promise<any> {
+  const formData = new FormData();
+  formData.append('file', file);
+  if (name) formData.append('name', name);
+
+  const res = await fetch(`${API_BASE}/api/v1/aoi/upload`, {
+    method: 'POST',
+    body: formData,
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`AOI upload failed: ${errText}`);
+  }
+  return await res.json();
+}
+
+export async function fetchObservationsTimeline(): Promise<any> {
+  const res = await fetch(`${API_BASE}/api/v1/images/timeline`, { cache: 'no-store' });
+  if (!res.ok) return { count: 0, timeline: [] };
+  return await res.json();
+}
+
+export async function replayAnalysisJob(jobId: string): Promise<any> {
+  const res = await fetch(`${API_BASE}/api/v1/analysis/${jobId}/replay`, {
+    method: 'POST',
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Analysis replay failed: ${errText}`);
+  }
+  return await res.json();
+}
+
+export async function searchSTAC(params: {
+  bbox: number[];
+  start_date?: string;
+  end_date?: string;
+  collection?: string;
+  max_cloud_cover?: number;
+}): Promise<any> {
+  const res = await fetch(`${API_BASE}/api/v1/stac/search`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      bbox: params.bbox,
+      start_date: params.start_date || '2024-01-01',
+      end_date: params.end_date || '2026-12-31',
+      collection: params.collection || 'sentinel-2-l2a',
+      max_cloud_cover: params.max_cloud_cover || 25.0,
+      limit: 10,
+    }),
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`STAC search failed: ${errText}`);
+  }
+  return await res.json();
+}
+
+export async function fetchModelsManifest(): Promise<any> {
+  const res = await fetch(`${API_BASE}/api/v1/models`, { cache: 'no-store' });
+  if (!res.ok) return { models: [], manifest: null, hardware: null };
+  return await res.json();
+}

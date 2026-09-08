@@ -15,6 +15,7 @@ from .api.routes import (
     evidence_router,
     reports_router,
     evaluation_router,
+    stac_router,
 )
 
 # Initialize database schema
@@ -47,6 +48,7 @@ app.include_router(analysis_router)
 app.include_router(evidence_router)
 app.include_router(reports_router)
 app.include_router(evaluation_router)
+app.include_router(stac_router)
 
 
 if __name__ == "__main__":

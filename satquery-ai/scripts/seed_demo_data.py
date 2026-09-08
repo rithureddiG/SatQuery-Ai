@@ -6,6 +6,13 @@ from pathlib import Path
 # Add project root to sys.path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 from backend.config import settings
 from backend.db import get_db, Base, engine
 from backend.models_db import ImageRecord, AOIRecord
@@ -73,6 +80,14 @@ def seed_demo_scenarios():
 
     # 3. Scenario 2: Bi-Temporal Change Pair (Before & After)
     before_path, after_path = create_synthetic_bitemporal_pair(demo_dir, width=128, height=128, change_box_size=32)
+    import shutil
+    target_b = demo_dir / "bitemporal_before_t1.tif"
+    target_a = demo_dir / "bitemporal_after_t2.tif"
+    if not target_b.exists():
+        shutil.copy2(before_path, target_b)
+    if not target_a.exists():
+        shutil.copy2(after_path, target_a)
+
     meta_b = extract_raster_metadata(before_path)
     meta_a = extract_raster_metadata(after_path)
     prev_b = Path(settings.preview_dir) / "demo_before_prev.png"
@@ -120,6 +135,47 @@ def seed_demo_scenarios():
     )
     db.merge(img_b)
     db.merge(img_a)
+
+    img_c_before = ImageRecord(
+        id="img_demo_change_before",
+        aoi_id="aoi_demo_isro",
+        filename="bitemporal_before_t1.tif",
+        path=str(target_b),
+        preview_path="/api/v1/images/img_demo_bitemporal_t1/preview",
+        format="GTiff",
+        width=128,
+        height=128,
+        band_count=3,
+        dtype="uint8",
+        crs=meta_b.crs.name,
+        epsg=meta_b.crs.epsg,
+        bounds=meta_b.bounds.wgs84 if meta_b.bounds and meta_b.bounds.wgs84 else None,
+        resolution=meta_b.resolution.__dict__ if meta_b.resolution else None,
+        modality=meta_b.modality.modality,
+        metadata_json=meta_b.to_dict(),
+        is_valid=True,
+    )
+    img_c_after = ImageRecord(
+        id="img_demo_change_after",
+        aoi_id="aoi_demo_isro",
+        filename="bitemporal_after_t2.tif",
+        path=str(target_a),
+        preview_path="/api/v1/images/img_demo_bitemporal_t2/preview",
+        format="GTiff",
+        width=128,
+        height=128,
+        band_count=3,
+        dtype="uint8",
+        crs=meta_a.crs.name,
+        epsg=meta_a.crs.epsg,
+        bounds=meta_a.bounds.wgs84 if meta_a.bounds and meta_a.bounds.wgs84 else None,
+        resolution=meta_a.resolution.__dict__ if meta_a.resolution else None,
+        modality=meta_a.modality.modality,
+        metadata_json=meta_a.to_dict(),
+        is_valid=True,
+    )
+    db.merge(img_c_before)
+    db.merge(img_c_after)
     print("✅ Seeded Scenario 2: Bi-Temporal Change Detection Pair (img_demo_bitemporal_t1 & t2)")
 
     # 4. Scenario 3: Co-registered Optical + SAR Pair

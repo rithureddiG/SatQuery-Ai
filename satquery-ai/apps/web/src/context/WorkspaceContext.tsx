@@ -45,7 +45,7 @@ export type LensMode =
   | 'CHANGE'
   | 'EVIDENCE';
 export type TemporalViewMode = 'Swipe' | 'Side by Side' | 'Difference';
-export type MapTool = 'select' | 'pan' | 'box' | 'polygon' | 'pin' | 'measure' | 'measure_area';
+export type MapTool = 'select' | 'pan' | 'box' | 'polygon' | 'pin' | 'measure' | 'measure_area' | 'inspect';
 export type VoiceStatus = 'IDLE' | 'LISTENING' | 'PROCESSING' | 'ERROR' | 'UNSUPPORTED';
 export type WorkstationMode = 'LIVE EARTH' | 'SCIENTIFIC BENCHMARK';
 
@@ -853,7 +853,9 @@ interface WorkspaceContextType {
   totalAreaHa: string;
   totalAreaM2: string;
   synthesizedInsight: string;
-<<<<<<< HEAD
+  customInsight: string;
+  customAreaHa: string;
+  customAreaM2: string;
 
   // Dynamic Corroboration Breakdown
   corroborationMetrics: {
@@ -864,11 +866,6 @@ interface WorkspaceContextType {
     spatialImpactPercent: number;
   };
   executionMode: 'DEMO / CLASSICAL CV' | 'REAL CHECKPOINTS' | 'BENCHMARK' | 'LIVE EARTH';
-=======
-  customInsight: string;
-  customAreaHa: string;
-  customAreaM2: string;
->>>>>>> 2019d312b210fc6b2710ccc46160130a9c942954
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType | null>(null);
@@ -1918,10 +1915,6 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         totalAreaHa,
         totalAreaM2,
         synthesizedInsight,
-<<<<<<< HEAD
-        corroborationMetrics,
-        executionMode,
-=======
         customInsight,
         setFindingTitle,
         setCustomInsight,
@@ -1929,7 +1922,8 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         setCustomAreaM2,
         customAreaHa,
         customAreaM2,
->>>>>>> 2019d312b210fc6b2710ccc46160130a9c942954
+        corroborationMetrics,
+        executionMode,
       }}
     >
       {children}

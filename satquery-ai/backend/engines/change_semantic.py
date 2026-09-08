@@ -127,11 +127,22 @@ class SemanticChangeClassifier:
                 summary_text="No significant land cover change detected within the observation window.",
             )
 
-        # Fallback dummy deltas if some indices not provided
-        d_ndvi = delta_ndvi if delta_ndvi is not None else np.zeros((h, w), dtype=np.float32)
-        d_ndbi = delta_ndbi if delta_ndbi is not None else np.zeros((h, w), dtype=np.float32)
-        d_ndwi = delta_ndwi if delta_ndwi is not None else np.zeros((h, w), dtype=np.float32)
-        d_sar = delta_sar_db if delta_sar_db is not None else np.zeros((h, w), dtype=np.float32)
+        def _match_shape(arr: Optional[np.ndarray]) -> np.ndarray:
+            if arr is None:
+                return np.zeros((h, w), dtype=np.float32)
+            if arr.shape == (h, w):
+                return arr.astype(np.float32)
+            try:
+                import cv2
+                return cv2.resize(arr.astype(np.float32), (w, h), interpolation=cv2.INTER_LINEAR)
+            except Exception:
+                from PIL import Image as _PIL
+                return np.asarray(_PIL.fromarray(arr.astype(np.float32)).resize((w, h)), dtype=np.float32)
+
+        d_ndvi = _match_shape(delta_ndvi)
+        d_ndbi = _match_shape(delta_ndbi)
+        d_ndwi = _match_shape(delta_ndwi)
+        d_sar = _match_shape(delta_sar_db)
 
         # 1. Decision logic for change categories
         c_new_builtup = is_changed & (
