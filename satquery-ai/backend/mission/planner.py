@@ -20,6 +20,7 @@ class NodeType(str, Enum):
     SPECTRAL_INDEX = "spectral_index"
     SAR_PREPROCESSING = "sar_preprocessing"
     PERCEPTION_INFERENCE = "perception_inference"
+    SPATIAL_RANKING = "spatial_ranking"
     SPATIAL_FUSION = "spatial_fusion"
     SEMANTIC_CHANGE = "semantic_change"
     DISAGREEMENT_ANALYSIS = "disagreement_analysis"
@@ -151,6 +152,25 @@ class MissionPlanner:
             )
             dag.add_node(vqa_node)
             last_step = vqa_node.id
+
+        elif spec.intent == MissionIntent.SPATIAL_RANKING:
+            rank_node = MissionNode(
+                id="step_1_spatial_ranking",
+                node_type=NodeType.SPATIAL_RANKING,
+                name="Deterministic Spatial Ranking & Geometric Extraction",
+                tool_or_model="SpatialRankingEngine",
+                inputs={
+                    "asset_id": asset_ids[0],
+                    "query": spec.query,
+                    "target": "water_body" if "water" in spec.target_phenomena else "built_up",
+                    "operation": "largest",
+                },
+                depends_on=[val_node.id],
+                estimated_vram_mb=400,
+                estimated_latency_sec=0.5,
+            )
+            dag.add_node(rank_node)
+            last_step = rank_node.id
 
         elif spec.intent == MissionIntent.VISUAL_GROUNDING:
             ground_node = MissionNode(

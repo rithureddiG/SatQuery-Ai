@@ -43,6 +43,17 @@ class OpticalSARAnalysisRequest(BaseModel):
     aoi_id: Optional[str] = None
 
 
+class SpatialRankRequest(BaseModel):
+    image_id: str = "active_image"
+    image_path: Optional[str] = None
+    target: str = "water_body"
+    operation: str = "largest"
+    aoi_id: Optional[str] = None
+    query: Optional[str] = ""
+    expected_source_image_id: Optional[str] = None
+    min_area_m2: float = 500.0
+
+
 @router.post("/vqa")
 def analyze_vqa(payload: VQARequest, db: Session = Depends(get_db)):
     """Execute single-image remote-sensing VQA with verifiable evidence generation."""
@@ -119,6 +130,41 @@ def analyze_optical_sar(payload: OpticalSARAnalysisRequest, db: Session = Depend
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Optical+SAR multimodal pipeline failed: {str(e)}",
+        )
+
+
+@router.post("/spatial-rank")
+def analyze_spatial_rank(payload: SpatialRankRequest, db: Session = Depends(get_db)):
+    """Execute deterministic spatial ranking (e.g. largest water body) with geodesic contour polygonization."""
+    try:
+        from ...engines.spatial_ranking import spatial_ranking_engine
+
+        if payload.image_path:
+            result = spatial_ranking_engine.execute(
+                image_path=payload.image_path,
+                target=payload.target,
+                operation=payload.operation,
+                image_id=payload.image_id,
+                expected_source_image_id=payload.expected_source_image_id,
+                min_area_m2=payload.min_area_m2,
+            )
+        else:
+            result = spatial_ranking_engine.rank(
+                image_id=payload.image_id,
+                target=payload.target,
+                operation=payload.operation,
+                db=db,
+                query=payload.query or f"Find {payload.operation} {payload.target}",
+                aoi_id=payload.aoi_id,
+                expected_source_image_id=payload.expected_source_image_id,
+            )
+        return result
+    except (ValueError, FileNotFoundError) as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Spatial ranking analysis failed: {str(e)}",
         )
 
 

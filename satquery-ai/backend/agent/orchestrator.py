@@ -76,6 +76,14 @@ class AgentOrchestrator:
                 "Optical + SAR multimodal corroboration requires both an Optical asset and a SAR radar asset."
             )
 
+        # For mono-temporal single-scene analysis, align target asset semantically if general list was passed
+        if spec.intent.value in ["spatial_ranking", "single_image_vqa", "visual_grounding"] and len(valid_images) > 1:
+            if "water" in spec.target_phenomena:
+                water_matches = [img for img in valid_images if any(k in img.id.lower() or k in (img.filename or "").lower() for k in ["water", "flood", "lake", "river", "brahmaputra"])]
+                if water_matches:
+                    other_imgs = [img for img in valid_images if img.id not in [w.id for w in water_matches]]
+                    valid_images = water_matches + other_imgs
+
         # 4. Generate Mission DAG
         dag = self.planner.plan(spec, [img.id for img in valid_images])
 

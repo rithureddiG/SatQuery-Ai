@@ -17,6 +17,7 @@ class MissionIntent(str, Enum):
     """Core perceptual and analytical intent of the query."""
     SINGLE_IMAGE_VQA = "single_image_vqa"
     VISUAL_GROUNDING = "visual_grounding"
+    SPATIAL_RANKING = "spatial_ranking"
     TEMPORAL_CHANGE = "temporal_change"
     CROSS_MODAL_FUSION = "cross_modal_fusion"
     COMPOUND_INVESTIGATION = "compound_investigation"
@@ -94,6 +95,13 @@ class MissionParser:
         r"\bhighlight\b", r"\bpoint out\b",
     ]
 
+    # Superlative ranking keywords
+    SUPERLATIVE_PATTERNS = [
+        r"\blargest\b", r"\bbiggest\b", r"\bmajor\b", r"\bmaximum\b",
+        r"\bmost extensive\b", r"\bhighest area\b", r"\bsmallest\b",
+        r"\btiniest\b", r"\bminimum\b", r"\blowest area\b",
+    ]
+
     # Keywords indicating temporal change
     CHANGE_PATTERNS = [
         r"\bchang(e|ed|ing)\b", r"\bdiffer(ence|ent)\b", r"\bbefore and after\b",
@@ -150,6 +158,8 @@ class MissionParser:
         has_change = any(re.search(p, q_lower) for p in self.CHANGE_PATTERNS)
         has_fusion = any(re.search(p, q_lower) for p in self.FUSION_PATTERNS) or (has_sar_available and "water" in detected_phenomena)
 
+        has_ranking = any(re.search(p, q_lower) for p in self.SUPERLATIVE_PATTERNS) and any(p in detected_phenomena for p in ["water", "built_up", "vegetation"])
+
         # 3. Classify intent & temporal scope
         if has_change and has_fusion:
             intent = MissionIntent.COMPOUND_INVESTIGATION
@@ -181,6 +191,16 @@ class MissionParser:
             constraints = MissionConstraints(
                 requires_same_aoi=True,
                 requires_coregistration=True,
+                requires_optical=True,
+            )
+        elif has_ranking:
+            intent = MissionIntent.SPATIAL_RANKING
+            temporal = TemporalScope.MONO_TEMPORAL
+            req_assets = 1
+            req_mods = ["optical"]
+            constraints = MissionConstraints(
+                requires_same_aoi=False,
+                requires_coregistration=False,
                 requires_optical=True,
             )
         elif has_grounding:

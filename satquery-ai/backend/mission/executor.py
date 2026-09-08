@@ -22,6 +22,7 @@ from ..engines import (
     SemanticChangeClassifier,
     TemporalReasoningEngine,
 )
+from ..engines.spatial_ranking import spatial_ranking_engine
 from ..pipelines import (
     run_single_image_vqa_pipeline,
     run_visual_grounding_pipeline,
@@ -180,6 +181,34 @@ class MissionExecutor:
                             "change_percent": change_res.get("change_percent", 0.0),
                             "total_area_m2": change_res.get("total_area_m2", 0.0),
                         }
+
+                # 3.5 SPATIAL_RANKING (Water / Built-up / Vegetation)
+                elif node.node_type == NodeType.SPATIAL_RANKING:
+                    recs = context.get("image_records", [])
+                    target = node.inputs.get("target", "water_body")
+                    operation = node.inputs.get("operation", "largest")
+                    rank_res = spatial_ranking_engine.rank(
+                        image_id=recs[0].id,
+                        target=target,
+                        operation=operation,
+                        db=db,
+                        query=query,
+                        aoi_id=aoi_id,
+                    )
+                    context["spatial_ranking_result"] = rank_res
+                    synthesized_answer = rank_res.get("answer", "")
+                    evidence_artifacts["spatial_ranking"] = rank_res.get("evidence", {})
+                    evidence_artifacts["pipeline_result"] = rank_res.get("pipeline_result", {})
+                    evidence_artifacts["regions_geojson"] = rank_res.get("pipeline_result", {}).get("regions_geojson")
+                    evidence_artifacts["total_area_ha"] = rank_res.get("finding", {}).get("area_ha", 0.0)
+                    evidence_artifacts["total_area_m2"] = rank_res.get("finding", {}).get("area_m2", 0.0)
+                    overall_confidence = rank_res.get("confidence", {}).get("overall", 0.90)
+                    confidence_breakdown = rank_res.get("confidence", {}).get("factors", {})
+                    out_summary = {
+                        "target": target,
+                        "operation": operation,
+                        "selected_area_ha": rank_res.get("finding", {}).get("area_ha", 0.0),
+                    }
 
                 # 4. SPECTRAL_INDEX
                 elif node.node_type == NodeType.SPECTRAL_INDEX:
