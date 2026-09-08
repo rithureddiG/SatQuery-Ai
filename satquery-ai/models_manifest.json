@@ -1,0 +1,82 @@
+{
+  "verified_at": "2026-09-08T16:51:53Z",
+  "host_hardware": {
+    "device": "cpu",
+    "device_name": "CPU",
+    "cuda_available": false,
+    "cuda_device_count": 0
+  },
+  "model_count": 5,
+  "models": [
+    {
+      "id": "geochat-7b",
+      "name": "GeoChat-7B (VQA & Grounding)",
+      "task": "vqa_and_grounding",
+      "architecture": "LLaVA-1.5 RS Fine-tuned (Vicuna-7B + CLIP-ViT-L/14)",
+      "status": "NOT_INSTALLED",
+      "truth_state": "CLASSICAL_FALLBACK",
+      "checkpoint_path": null,
+      "checkpoint_sha256": null,
+      "vram_required_mb": 4500,
+      "fallback_available": true,
+      "fallback_mechanism": "Deterministic spectral-spatial grounded heuristic classifier"
+    },
+    {
+      "id": "changenet-v1",
+      "name": "Siamese ChangeNet (Bi-Temporal CD)",
+      "task": "bitemporal_change_detection",
+      "architecture": "Siamese ResNet18 + Feature Pyramid Difference Head",
+      "status": "READY_CPU",
+      "truth_state": "UNTRAINED_MODEL",
+      "checkpoint_path": null,
+      "checkpoint_sha256": null,
+      "vram_required_mb": 2500,
+      "fallback_available": true,
+      "fallback_mechanism": "Spectral index differential (\u0394NDBI / \u0394NDVI / \u0394NDWI) and adaptive thresholding"
+    },
+    {
+      "id": "dofa-foundation",
+      "name": "DOFA Multimodal Foundation (Optical + SAR)",
+      "task": "multimodal_representation_and_corroboration",
+      "architecture": "Wavelength-Conditioned ViT-Base",
+      "status": "CLASSICAL_FALLBACK",
+      "truth_state": "CLASSICAL_FALLBACK",
+      "checkpoint_path": null,
+      "checkpoint_sha256": null,
+      "vram_required_mb": 1200,
+      "corroboration_level": "LEVEL_2_SPATIAL_CORROBORATION",
+      "fallback_available": true,
+      "fallback_mechanism": "Spatial intersection IoU, consensus area, and discordance diagnosis"
+    },
+    {
+      "id": "sam-rs",
+      "name": "SAM-RS (Spatial Mask Refinement)",
+      "task": "spatial_mask_refinement",
+      "architecture": "ViT-B Image Encoder + Prompt Lightweight Mask Decoder",
+      "status": "CLASSICAL_FALLBACK",
+      "truth_state": "CLASSICAL_FALLBACK",
+      "checkpoint_path": null,
+      "checkpoint_sha256": null,
+      "vram_required_mb": 2000,
+      "fallback_available": true,
+      "fallback_mechanism": "Connected components polygonization + convex hull / concave alpha-shape refinement"
+    },
+    {
+      "id": "sar-calibrator",
+      "name": "Calibrated SAR Radiometric Processor",
+      "task": "sar_backscatter_and_water_detection",
+      "architecture": "Physics-Grounded Radiometric Calibration + Lee 5x5 Filter + Adaptive Thresholding",
+      "status": "READY_CPU",
+      "truth_state": "REAL_MODEL",
+      "checkpoint_path": "deterministic_physics_engine",
+      "checkpoint_sha256": null,
+      "vram_required_mb": 0,
+      "fallback_available": false,
+      "capabilities": [
+        "sigma0_calibration_db",
+        "lee_filter",
+        "urban_double_bounce_analysis"
+      ]
+    }
+  ]
+}
