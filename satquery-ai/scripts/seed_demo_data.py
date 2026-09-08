@@ -18,7 +18,7 @@ from backend.db import get_db, Base, engine
 from backend.models_db import ImageRecord, AOIRecord
 from backend.geospatial.metadata import extract_raster_metadata
 from backend.storage.preview import generate_raster_preview as generate_preview
-from tests.fixtures.synthetic_raster import create_synthetic_multiband_geotiff
+from tests.fixtures.synthetic_raster import create_synthetic_multiband_geotiff, create_synthetic_water_geotiff
 from tests.fixtures.synthetic_bitemporal import create_synthetic_bitemporal_pair
 from tests.fixtures.synthetic_optical_sar import create_synthetic_optical_sar_pair
 
@@ -231,7 +231,7 @@ def seed_demo_scenarios():
 
     # 5. Scenario 4: Flood & Reservoir Water Dynamics (Mission 0248 / 0250)
     flood_path = demo_dir / "scene_brahmaputra_flood.tif"
-    create_synthetic_multiband_geotiff(flood_path, width=128, height=128, bands=4, epsg=32643)
+    create_synthetic_water_geotiff(flood_path, width=128, height=128, epsg=32643)
     meta_flood = extract_raster_metadata(flood_path)
     prev_flood = Path(settings.preview_dir) / "demo_flood_prev.png"
     generate_preview(flood_path, prev_flood)
