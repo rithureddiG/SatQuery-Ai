@@ -822,6 +822,9 @@ interface WorkspaceContextType {
   totalAreaHa: string;
   totalAreaM2: string;
   synthesizedInsight: string;
+  customInsight: string;
+  customAreaHa: string;
+  customAreaM2: string;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType | null>(null);
@@ -1336,10 +1339,10 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
 
         if (res?.location) {
           updateMissionLocation({
-            name: res.location.name,
-            lat: res.location.lat,
-            lon: res.location.lon,
-            utmZone: res.location.crs_name || `EPSG:${res.location.epsg} (UTM Zone ${res.location.utm_zone}N)`,
+            name: res.location.name || currentMission.name,
+            lat: res.location.lat ?? currentMission.lat,
+            lon: res.location.lon ?? currentMission.lon,
+            utmZone: res.location.crs_name || (res.location.epsg ? `EPSG:${res.location.epsg}` : currentMission.utmZone),
             areaAoi: `${res.pipeline_result?.total_area_ha || 25} ha`,
           });
         }
@@ -1785,6 +1788,9 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         totalAreaHa,
         totalAreaM2,
         synthesizedInsight,
+        customInsight,
+        customAreaHa,
+        customAreaM2,
       }}
     >
       {children}

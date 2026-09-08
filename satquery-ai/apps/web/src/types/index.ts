@@ -281,6 +281,16 @@ export interface OpticalSARAnalysisResult {
   total_duration_ms: number;
 }
 
+export interface AgentQueryLocation {
+  name?: string;
+  lat?: number;
+  lon?: number;
+  crs_name?: string;
+  utm_zone?: number | string;
+  utmZone?: string;
+  epsg?: number;
+}
+
 export interface AgentQueryResponse {
   query: string;
   intent: string;
@@ -288,6 +298,7 @@ export interface AgentQueryResponse {
   intent_confidence: number;
   job_id: string;
   answer: string;
+  location?: AgentQueryLocation;
   pipeline_result: any;
   confidence: ConfidenceScore;
   evidence: EvidenceObject;
