@@ -19,6 +19,7 @@ from .registration import align_image_pairs
 from .isro_formats import detect_isro_sensor, get_isro_sensor_catalog, ISROSensorProfile
 from .sar_processor import SARProcessor
 from .indices import compute_savi, compute_mndwi, compute_ndmi, compute_bsi
+from .cloud import CloudQualityEstimator, CloudQualityResult
 
 __all__ = [
     "inspect_crs",
@@ -52,4 +53,6 @@ __all__ = [
     "compute_mndwi",
     "compute_ndmi",
     "compute_bsi",
+    "CloudQualityEstimator",
+    "CloudQualityResult",
 ]
