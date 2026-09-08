@@ -104,6 +104,22 @@ capabilities:
     production_ready: true
     description: "Categorization into new_urban_builtup, vegetation_clearing, water_expansion via ΔNDVI/ΔNDBI"
 
+  spatial_ranking_and_water_body_analysis:
+    implemented: true
+    integrated: true
+    validated: true
+    benchmarked: true
+    production_ready: true
+    description: "Deterministic spectral segmentation (MNDWI/NDWI), connected components, and geodesic argmax(area) calculation for superlatives (largest/smallest) yielding genuine vector contours"
+
+  training_and_evaluation_layer:
+    implemented: true
+    integrated: true
+    validated: true
+    benchmarked: true
+    production_ready: true
+    description: "Dataset loaders (RSVQA, VRSBench, LEVIR-CD, BigEarthNet-MM), preprocessing, trainers (ChangeNet, Grounding Adapter, Fusion Head), and evaluation benchmarks with SHA-256 provenance tracking"
+
   # 4. Multi-Modal Corroboration vs Fusion
   optical_sar_spatial_corroboration:
     implemented: true

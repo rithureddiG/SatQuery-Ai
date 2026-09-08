@@ -116,6 +116,27 @@ flowchart TD
 - **SAR Branch:** Sentinel-1 C-band radar backscatter intensity ($\sigma^0$ in dB) and specular low-backscatter detection ($< -20\text{ dB}$).
 - **Cross-Modal Consistency Index:** Explicitly cross-examines optical shadow false alarms against all-weather radar penetration.
 
+### 5. Deterministic Spatial Ranking & Spectral Water Body Analysis
+- **Core Principle:** *"Models produce evidence. The agent selects models. The evidence engine determines confidence."*
+- **Query Capability Planner:** Parses queries like *"Where is the largest water body?"* into structured intent:
+  $$\text{Query} \xrightarrow{\text{Planner}} \{\text{intent: spatial\_ranking}, \text{target: water\_body}, \text{operation: largest}, \text{measure: area}\}$$
+- **Geospatial Pipeline:**
+  $$\text{Multi-band GeoTIFF} \xrightarrow{\text{MNDWI / NDWI}} \text{Spectral Mask} \xrightarrow{\text{Morphology}} \text{Connected Components} \xrightarrow{\text{Contour Extraction}} \text{GeoJSON Polygons} \xrightarrow{\text{WGS84 Geodesic Area}} \operatorname{argmax}(\text{area})$$
+- **Zero Hallucination:** Eliminates hardcoded bounding boxes and static confidence scores. Emits verified polygon contours with geodesic area and explicit abstention (`decision: "ABSTAIN"`) if no water is detected.
+
+### 6. Defensible Training & Provenance Layer (`training/`)
+SatQuery AI enforces an auditable, six-state model lifecycle:
+$$\text{Dataset Named} \rightarrow \text{Dataset Downloaded} \rightarrow \text{Preprocessed} \rightarrow \text{Trained} \rightarrow \text{Validated} \rightarrow \text{SHA-256 Registered Checkpoint}$$
+
+```
+training/
+├── manifests/       # datasets.yaml, models.yaml, experiments.yaml
+├── datasets/        # RSVQA, VRSBench, LEVIR-CD, BigEarthNet-MM, S2 Water
+├── preprocess/      # Sentinel-1 (radiometric/Lee), Sentinel-2, change pairs, grounding
+├── trainers/        # ChangeNet (BCE+Dice), Grounding Adapter, Optical+SAR Fusion Head
+└── evaluation/      # vqa.py, grounding.py, change.py, fusion.py
+```
+
 ---
 
 ## 📊 Evaluation Status & Benchmark Harness

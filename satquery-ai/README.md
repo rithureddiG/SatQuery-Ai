@@ -49,7 +49,7 @@ The launcher automatically:
 | Mission | Type | Natural-Language Query | Primary Execution Flow |
 |---|---|---|---|
 | **01** | **RS-VQA** | *"Describe the dominant land cover and major objects visible in this image."* | 3-Layer Router (`vqa`) → GeoChat Specialist → Land Cover Assessment + Evidence Card |
-| **02** | **Grounding** | *"Where is the largest water body?"* | Router (`grounding`) → GeoChat BBox $[y_{\min}, x_{\min}, y_{\max}, x_{\max}]$ → Affine Geotransform → Shapely Metric UTM Area ($m^2$, ha) |
+| **02** | **Spatial Ranking / Water Body** | *"Where is the largest water body?"* | Query Planner (`spatial_ranking`) → WaterBodyAnalyzer (MNDWI/NDWI + morphology) → SpatialRankingEngine ($\operatorname{argmax}(\text{area})$) → GeoJSON Vector Contours + Geodesic Area |
 | **03** | **Temporal Change** | *"What changed between these two observations and where?"* | $T_1 + T_2$ → ORB/RANSAC Alignment → Siamese ChangeNet CNN → 2D Sigmoid Tensor ($>0.5$) → OpenCV Contours → Map Red Clusters (`01`, `02`) |
 | **04** | **Optical + SAR** | *"Use both images together to identify regions that are likely built-up."* | Optical S2 + SAR S1 → DOFA Specialist → Spectral Index vs $\sigma^0$ dB Backscatter ($-14.5\text{ dB}$) → Decision Concordance Score |
 | **05** | **Compound Query** | *"Has the built-up area increased between the two dates? Use the optical and SAR observations to corroborate the result and report the total changed area in hectares."* | **Multi-Model Orchestration**: ChangeNet temporal pipeline + DOFA Optical/SAR corroboration → $2.56\text{ ha}$ ($25,600\text{ m}^2$) alteration + SAR verification + 1-click PDF/GeoJSON/CSV exports |
