@@ -23,6 +23,8 @@ except ImportError:
 
 try:
     import rasterio
+    import rasterio.warp
+    import rasterio.windows
     from rasterio.crs import CRS
     HAS_RASTERIO = True
 except ImportError:
@@ -360,7 +362,6 @@ class AssetFactory:
                             "max_lat": round(b.top, 6),
                         }
                     else:
-                        import rasterio.warp
                         wgs84_crs = CRS.from_epsg(4326)
                         xs = [b.left, b.right, b.left, b.right]
                         ys = [b.bottom, b.bottom, b.top, b.top]

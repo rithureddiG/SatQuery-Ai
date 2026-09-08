@@ -12,6 +12,7 @@ interface ReportExportModalProps {
     pdf: string;
     geojson: string;
     csv: string;
+    json?: string;
   };
 }
 
@@ -22,6 +23,8 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
   reportUrls,
 }) => {
   if (!isOpen) return null;
+
+  const jsonUrl = reportUrls.json || `/api/v1/reports/${jobId}/json`;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 select-none">
@@ -106,6 +109,27 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
                   CSV Metrics Spreadsheet
                 </p>
                 <p className="text-[11px] text-[#737373]">Tabular execution log & cluster areas</p>
+              </div>
+            </div>
+            <Download className="w-4 h-4 text-[#888888] group-hover:text-[#111111] transition-colors" />
+          </a>
+
+          {/* JSON EvidenceContract Download */}
+          <a
+            href={getReportDownloadUrl(jsonUrl)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-between p-3 rounded-xl bg-[#F8F8F6] border border-[#E8E8E5] hover:border-[#111111] hover:bg-white transition-all group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 font-mono text-[10px] font-bold">
+                JSON
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-[#111111] group-hover:text-black">
+                  EvidenceContract JSON Dossier
+                </p>
+                <p className="text-[11px] text-[#737373]">Full verifiable audit trail & provenance steps</p>
               </div>
             </div>
             <Download className="w-4 h-4 text-[#888888] group-hover:text-[#111111] transition-colors" />

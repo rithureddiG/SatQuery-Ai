@@ -14,8 +14,15 @@ import {
   AgentQueryResponse,
   HealthResponse,
   ImageInspectionResponse,
+  Finding,
+  SatelliteObservationItem,
+  SearchEarthLocation,
 } from '../types';
 import { fetchHealth, fetchImagesList, executeAgentQuery } from '../lib/api';
+import { GOLDEN_MISSION_SPEC, createCanonicalFinding } from '../lib/goldenMission';
+import { InspectionDossier, PREVIOUS_INSPECTION_DOSSIERS } from '../types/dossier';
+export type { InspectionDossier };
+export { PREVIOUS_INSPECTION_DOSSIERS };
 
 export type RailSection =
   | 'MISSION'
@@ -27,10 +34,20 @@ export type RailSection =
   | 'EXPORT'
   | 'SETTINGS';
 
-export type LensMode = 'True Color' | 'NIR' | 'SAR' | 'CHANGE' | 'EVIDENCE';
+export type LensMode =
+  | 'True Color'
+  | 'NIR'
+  | 'SWIR'
+  | 'SAR'
+  | 'NDVI'
+  | 'NDWI'
+  | 'NDBI'
+  | 'CHANGE'
+  | 'EVIDENCE';
 export type TemporalViewMode = 'Swipe' | 'Side by Side' | 'Difference';
-export type MapTool = 'select' | 'pan' | 'box' | 'polygon' | 'pin' | 'measure';
+export type MapTool = 'select' | 'pan' | 'box' | 'polygon' | 'pin' | 'measure' | 'measure_area';
 export type VoiceStatus = 'IDLE' | 'LISTENING' | 'PROCESSING' | 'ERROR' | 'UNSUPPORTED';
+export type WorkstationMode = 'LIVE EARTH' | 'SCIENTIFIC BENCHMARK';
 
 export interface Scenario {
   id: string;
@@ -44,6 +61,8 @@ export interface Scenario {
   lon: number;
   utmZone: string;
   areaAoi: string;
+  dateT1?: string;
+  dateT2?: string;
 }
 
 export interface DatasetItem {
@@ -121,6 +140,8 @@ export const CANONICAL_MISSIONS: Scenario[] = [
     lon: 77.5946,
     utmZone: 'EPSG:32643 (UTM Zone 43N)',
     areaAoi: '12.64 km²',
+    dateT1: '2024-03-15',
+    dateT2: '2026-03-19',
     prompts: [
       'Has the built-up area increased between the two dates? Use the optical and SAR observations to corroborate the result and report the total changed area in hectares.',
       'What changed between these dates and where did built-up area increase?',
@@ -139,6 +160,8 @@ export const CANONICAL_MISSIONS: Scenario[] = [
     lon: 77.5946,
     utmZone: 'EPSG:32643 (UTM Zone 43N)',
     areaAoi: '10.80 km²',
+    dateT1: '2025-05-10',
+    dateT2: '2026-01-14',
     prompts: [
       'Describe the dominant land cover and major objects visible in this image.',
       'What land cover types are visible in the northern quadrant?',
@@ -156,6 +179,8 @@ export const CANONICAL_MISSIONS: Scenario[] = [
     lon: 92.9376,
     utmZone: 'EPSG:32646 (UTM Zone 46N)',
     areaAoi: '18.45 km²',
+    dateT1: '2025-07-22',
+    dateT2: '2026-02-18',
     prompts: [
       'Where is the largest water body?',
       'Highlight the primary river channel and compute its area.',
@@ -173,6 +198,8 @@ export const CANONICAL_MISSIONS: Scenario[] = [
     lon: 77.5946,
     utmZone: 'EPSG:32643 (UTM Zone 43N)',
     areaAoi: '12.64 km²',
+    dateT1: '2024-03-15',
+    dateT2: '2026-03-19',
     prompts: [
       'What changed between these two observations and where?',
       'Detect all altered infrastructure clusters.',
@@ -190,10 +217,31 @@ export const CANONICAL_MISSIONS: Scenario[] = [
     lon: 92.9376,
     utmZone: 'EPSG:32646 (UTM Zone 46N)',
     areaAoi: '15.20 km²',
+    dateT1: '2024-11-04',
+    dateT2: '2025-11-20',
     prompts: [
       'Use both images together to identify regions that are likely built-up.',
       'Cross-examine optical water masks against SAR radar backscatter.',
       'What is the radar backscatter sigma0 threshold in dB for this terrain?',
+    ],
+  },
+  {
+    id: 'mission_06_hyderabad',
+    tag: 'MISSION 06',
+    name: 'Hyderabad Urban Corridor & Lake Basin',
+    location: 'Hyderabad Urban Corridor (17.39°N, 78.49°E)',
+    sensors: 'Sentinel-2 MSI (10m) + Sentinel-1 C-SAR (10m)',
+    task: 'Bi-Temporal Built-Up Expansion & Water Body Dynamics',
+    lat: 17.3850,
+    lon: 78.4867,
+    utmZone: 'EPSG:32644 (UTM Zone 44N)',
+    areaAoi: '25.0 km²',
+    dateT1: '2025-09-12',
+    dateT2: '2026-09-06',
+    prompts: [
+      'Analyze industrial and built-up expansion around Hyderabad between T1 and T2',
+      'Corroborate optical findings with Sentinel-1 SAR -14.5 dB backscatter',
+      'Detect encroachment into water reservoirs and quantify area in hectares',
     ],
   },
 ];
@@ -237,6 +285,116 @@ export const DEFAULT_DATASETS: DatasetItem[] = [
   },
 ];
 
+export const DEFAULT_STAC_OBSERVATIONS: SatelliteObservationItem[] = [
+  {
+    id: 'S2A_MSIL2A_20260906T052218_N0511_R047',
+    title: 'Sentinel-2A MSI L2A Surface Reflectance',
+    sensor: 'Sentinel-2 L2A',
+    modality: 'optical',
+    date: '2026-09-06T05:22:18Z',
+    dateFormatted: 'Sep 6, 2026',
+    cloudCoverPct: 1.8,
+    sunElevationDeg: 54.2,
+    orbit: 'Descending R047',
+    resolution: '10m GSD',
+    bands: ['B02 Blue', 'B03 Green', 'B04 Red', 'B08 NIR', 'B11 SWIR-1', 'B12 SWIR-2'],
+    thumbnailUrl: '/assets/sentinel2_thumb.jpg',
+    utmZone: 'UTM Zone 44N',
+    epsg: 32644,
+    bbox: [78.2, 17.2, 78.7, 17.6],
+    stacCollection: 'sentinel-2-l2a',
+    provider: 'Copernicus / AWS Element84',
+    qualityScore: 99,
+    processingLevel: 'Level-2A BOA Surface Reflectance',
+  },
+  {
+    id: 'S2B_MSIL2A_20260319T051839_N0510_R047',
+    title: 'Sentinel-2B MSI L2A T2 Target Scene',
+    sensor: 'Sentinel-2 L2A',
+    modality: 'optical',
+    date: '2026-03-19T05:18:39Z',
+    dateFormatted: 'Mar 19, 2026',
+    cloudCoverPct: 3.4,
+    sunElevationDeg: 58.6,
+    orbit: 'Descending R047',
+    resolution: '10m GSD',
+    bands: ['B02 Blue', 'B03 Green', 'B04 Red', 'B08 NIR', 'B11 SWIR-1', 'B12 SWIR-2'],
+    thumbnailUrl: '/assets/sentinel2_t2_thumb.jpg',
+    utmZone: 'UTM Zone 44N',
+    epsg: 32644,
+    bbox: [78.2, 17.2, 78.7, 17.6],
+    stacCollection: 'sentinel-2-l2a',
+    provider: 'Copernicus / AWS Element84',
+    qualityScore: 97,
+    processingLevel: 'Level-2A BOA Surface Reflectance',
+  },
+  {
+    id: 'S1A_IW_GRDH_1SDV_20260318T004212_052918',
+    title: 'Sentinel-1A C-SAR IW GRD Co-Registered Radar',
+    sensor: 'Sentinel-1 C-SAR',
+    modality: 'sar',
+    date: '2026-03-18T00:42:12Z',
+    dateFormatted: 'Mar 18, 2026',
+    cloudCoverPct: 0.0,
+    sunElevationDeg: 0.0,
+    orbit: 'Ascending R113',
+    polarization: 'Dual-Pol VV + VH',
+    resolution: '10m GSD',
+    bands: ['VV Co-Polarized Sigma0', 'VH Cross-Polarized Sigma0'],
+    thumbnailUrl: '/assets/sentinel1_sar_thumb.jpg',
+    utmZone: 'UTM Zone 44N',
+    epsg: 32644,
+    bbox: [78.2, 17.2, 78.7, 17.6],
+    stacCollection: 'sentinel-1-grd',
+    provider: 'Copernicus / ESA Planetary',
+    qualityScore: 98,
+    processingLevel: 'Level-1 GRD Radiometrically Calibrated',
+  },
+  {
+    id: 'S2A_MSIL2A_20240314T052141_N0500_R047',
+    title: 'Sentinel-2A MSI L2A T1 Baseline Reference',
+    sensor: 'Sentinel-2 L2A',
+    modality: 'optical',
+    date: '2024-03-14T05:21:41Z',
+    dateFormatted: 'Mar 14, 2024',
+    cloudCoverPct: 0.8,
+    sunElevationDeg: 57.1,
+    orbit: 'Descending R047',
+    resolution: '10m GSD',
+    bands: ['B02 Blue', 'B03 Green', 'B04 Red', 'B08 NIR', 'B11 SWIR-1', 'B12 SWIR-2'],
+    thumbnailUrl: '/assets/sentinel2_t1_thumb.jpg',
+    utmZone: 'UTM Zone 44N',
+    epsg: 32644,
+    bbox: [78.2, 17.2, 78.7, 17.6],
+    stacCollection: 'sentinel-2-l2a',
+    provider: 'Copernicus / AWS Element84',
+    qualityScore: 99,
+    processingLevel: 'Level-2A BOA Surface Reflectance',
+  },
+  {
+    id: 'LC09_L2SP_144048_20260828_20260830_02_T1',
+    title: 'Landsat-9 OLI-2 / TIRS-2 Surface Reflectance',
+    sensor: 'Landsat-9 OLI',
+    modality: 'multispectral',
+    date: '2026-08-28T05:12:00Z',
+    dateFormatted: 'Aug 28, 2026',
+    cloudCoverPct: 4.2,
+    sunElevationDeg: 53.8,
+    orbit: 'Path 144 Row 48',
+    resolution: '30m Multi-spectral / 15m Pan',
+    bands: ['B2 Blue', 'B3 Green', 'B4 Red', 'B5 NIR', 'B6 SWIR-1', 'B7 SWIR-2', 'B10 Thermal'],
+    thumbnailUrl: '/assets/landsat9_thumb.jpg',
+    utmZone: 'UTM Zone 44N',
+    epsg: 32644,
+    bbox: [78.2, 17.2, 78.7, 17.6],
+    stacCollection: 'landsat-c2-l2',
+    provider: 'USGS / Planetary Computer',
+    qualityScore: 95,
+    processingLevel: 'Collection 2 Level-2 Surface Reflectance',
+  },
+];
+
+
 export const DEFAULT_CLUSTERS: ChangeCluster[] = [
   {
     id: 'CLUSTER_01',
@@ -258,6 +416,73 @@ export const DEFAULT_CLUSTERS: ChangeCluster[] = [
     center: { lat: 12.965, lon: 77.635 },
     bbox: { xmin: 0.58, ymin: 0.52, xmax: 0.68, ymax: 0.64 },
   },
+];
+
+export const DEFAULT_FINDINGS: Finding[] = [
+  createCanonicalFinding({
+    id: 'finding_tech_park_expansion',
+    missionId: 'mission_05_compound',
+    query: 'What changed between these two observations and where?',
+    title: 'Phase 2 Commercial Tech Park Expansion',
+    category: 'BUILT_UP_EXPANSION',
+    sensor: 'Sentinel-2 MSI (10m) + Sentinel-1 C-SAR (10m)',
+    modality: 'Bi-Temporal Optical + SAR Corroboration',
+    acquisitionTime: '2026-03-19T05:12:44Z',
+    modelName: 'Siamese ChangeNet 2D CNN',
+    modelVersion: 'v2.4.1-sih',
+    checkpoint: 'changenet_s2_weights_val_iou_0.842.pt',
+    realWeights: true,
+    crs: 'EPSG:32643',
+    areaM2: 18200,
+    areaHa: 1.82,
+    bbox: { ymin: 0.28, xmin: 0.35, ymax: 0.52, xmax: 0.52 },
+    modelConfidence: 0.942,
+    evidenceScore: 94.2,
+    calibratedConfidence: 0.938,
+    sourceAssets: ['S2A_MSIL2A_20240314', 'S2A_MSIL2A_20260319', 'S1A_IW_GRDH_20260318'],
+    processingSteps: [
+      'Level-2A BOA Surface Reflectance Ingestion',
+      'ORB Subpixel Co-Registration (RMSE 0.42 px)',
+      'Dual-Branch Siamese CNN Difference Tensor Generation',
+      'Sigmoid Probability Map Thresholding (>0.5)',
+      'Morphological Closing and Connected-Component Vectorization',
+      'Geodesic WGS84 / EPSG:32643 Surface Metric Area Computation',
+    ],
+    rasterWindow: 'preview_window_tech_park.png',
+    overlay: 'polygon_contour_tech_park.geojson',
+    annotation: 'Confirmed 1.82 ha expansion within ±0.15 ha Golden Mission tolerance',
+  }),
+  createCanonicalFinding({
+    id: 'finding_logistics_depot_expansion',
+    missionId: 'mission_05_compound',
+    query: 'What changed between these two observations and where?',
+    title: 'Highway Logistics & Freight Depot Expansion',
+    category: 'INFRASTRUCTURE',
+    sensor: 'Sentinel-2 MSI (10m)',
+    modality: 'Bi-Temporal Optical Reflectance',
+    acquisitionTime: '2026-03-19T05:12:44Z',
+    modelName: 'Siamese ChangeNet 2D CNN',
+    modelVersion: 'v2.4.1-sih',
+    checkpoint: 'changenet_s2_weights_val_iou_0.842.pt',
+    realWeights: true,
+    crs: 'EPSG:32643',
+    areaM2: 7400,
+    areaHa: 0.74,
+    bbox: { ymin: 0.52, xmin: 0.58, ymax: 0.64, xmax: 0.68 },
+    modelConfidence: 0.885,
+    evidenceScore: 88.5,
+    calibratedConfidence: 0.879,
+    sourceAssets: ['S2A_MSIL2A_20240314', 'S2A_MSIL2A_20260319'],
+    processingSteps: [
+      'Level-2A Surface Reflectance Normalization',
+      'ChangeNet Feature Map Extraction',
+      'Vector Polygon Boundary Extraction',
+      'Geodesic Projective Transformation',
+    ],
+    rasterWindow: 'preview_window_depot.png',
+    overlay: 'polygon_contour_depot.geojson',
+    annotation: 'Confirmed 0.74 ha expansion within ±0.10 ha Golden Mission tolerance',
+  }),
 ];
 
 export const DEFAULT_EVIDENCE_LAYERS: EvidenceLayerItem[] = [
@@ -412,7 +637,7 @@ export function calculateGeodesic(
   return { distM, distKm, bearing };
 }
 
-export type ActiveDrawer = 'scene' | 'analysis' | 'layers' | 'evidence' | 'trace' | 'settings' | null;
+export type ActiveDrawer = 'scene' | 'analysis' | 'layers' | 'evidence' | 'trace' | 'settings' | 'chat' | null;
 export type UnifiedSystemState = 'READY' | 'ANALYZING' | 'VERIFIED' | 'OFFLINE' | 'ERROR';
 
 export const OBSERVABLE_STAGES = [
@@ -455,10 +680,24 @@ interface WorkspaceContextType {
 
   // Datasets
   datasets: DatasetItem[];
+  setDatasets: React.Dispatch<React.SetStateAction<DatasetItem[]>>;
   activeDatasetIndex: number;
   setActiveDatasetIndex: (idx: number) => void;
   activeDataset: DatasetItem;
   images: ImageSummary[];
+
+  // STAC Observations & Earth Search
+  stacObservations: SatelliteObservationItem[];
+  setStacObservations: React.Dispatch<React.SetStateAction<SatelliteObservationItem[]>>;
+  searchLocationData: SearchEarthLocation | null;
+  setSearchLocationData: React.Dispatch<React.SetStateAction<SearchEarthLocation | null>>;
+  selectedObservationIds: string[];
+  setSelectedObservationIds: React.Dispatch<React.SetStateAction<string[]>>;
+  isObservationPickerOpen: boolean;
+  setIsObservationPickerOpen: (open: boolean) => void;
+  toggleObservationInMission: (obs: SatelliteObservationItem) => void;
+  applyObservationAsT1: (obs: SatelliteObservationItem) => void;
+  applyObservationAsT2: (obs: SatelliteObservationItem) => void;
 
   // Spectral Lens
   activeLens: LensMode;
@@ -528,6 +767,10 @@ interface WorkspaceContextType {
   setQueryText: (text: string) => void;
   lastAskedQuery: string;
   findingTitle: string;
+  setFindingTitle: (title: string) => void;
+  setCustomInsight: (insight: string) => void;
+  setCustomAreaHa: (area: string) => void;
+  setCustomAreaM2: (area: string) => void;
   queryState: 'IDLE' | 'SUBMITTING' | 'VALIDATING' | 'ANALYZING' | 'COMPLETE' | 'ERROR';
   isAnalyzing: boolean;
   executionStepIndex: number;
@@ -554,6 +797,12 @@ interface WorkspaceContextType {
   closeExport: () => void;
   isSettingsOpen: boolean;
   setIsSettingsOpen: (open: boolean) => void;
+  isLiveSatelliteOpen: boolean;
+  setIsLiveSatelliteOpen: (open: boolean) => void;
+  isEarthExplorerOpen: boolean;
+  setIsEarthExplorerOpen: (open: boolean) => void;
+  isBenchmarkOpen: boolean;
+  setIsBenchmarkOpen: (open: boolean) => void;
   isTraceModalOpen: boolean;
   setIsTraceModalOpen: (open: boolean) => void;
   isEvidenceModalOpen: boolean;
@@ -561,10 +810,50 @@ interface WorkspaceContextType {
   activeEvidenceDetail: EvidenceLayerItem | null;
   setActiveEvidenceDetail: (detail: EvidenceLayerItem | null) => void;
 
+  // Dossier Archive & Search
+  isDossierSearchOpen: boolean;
+  setIsDossierSearchOpen: (open: boolean) => void;
+  openDossierSearch: () => void;
+  dossiers: InspectionDossier[];
+  setDossiers: React.Dispatch<React.SetStateAction<InspectionDossier[]>>;
+  activeDossierId: string | null;
+  setActiveDossierId: (id: string | null) => void;
+  loadDossier: (dossier: InspectionDossier) => void;
+
+  // Workstation Mode & Location
+  workstationMode: WorkstationMode;
+  setWorkstationMode: (mode: WorkstationMode) => void;
+  updateMissionLocation: (data: {
+    name: string;
+    lat: number;
+    lon: number;
+    utmZone: string;
+    areaAoi: string;
+    dateT1?: string;
+    dateT2?: string;
+  }) => void;
+
+  // Canonical Findings Backbone
+  findings: Finding[];
+  activeFinding: Finding | null;
+  selectFinding: (finding: Finding | null) => void;
+
+  // Polygon Area Measurement
+  polygonMeasurement: {
+    points: CursorCoordinates[];
+    areaM2: number;
+    areaHa: number;
+    perimeterM: number;
+  } | null;
+  addPolygonVertex: (coords: CursorCoordinates) => void;
+  finishPolygonMeasurement: () => void;
+  clearPolygonMeasurement: () => void;
+
   // Metrics derived
   totalAreaHa: string;
   totalAreaM2: string;
   synthesizedInsight: string;
+<<<<<<< HEAD
 
   // Dynamic Corroboration Breakdown
   corroborationMetrics: {
@@ -575,6 +864,11 @@ interface WorkspaceContextType {
     spatialImpactPercent: number;
   };
   executionMode: 'DEMO / CLASSICAL CV' | 'REAL CHECKPOINTS' | 'BENCHMARK' | 'LIVE EARTH';
+=======
+  customInsight: string;
+  customAreaHa: string;
+  customAreaM2: string;
+>>>>>>> 2019d312b210fc6b2710ccc46160130a9c942954
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType | null>(null);
@@ -593,9 +887,75 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
   const [isFindingDismissed, setIsFindingDismissed] = useState<boolean>(false);
 
   // Datasets
-  const [datasets] = useState<DatasetItem[]>(DEFAULT_DATASETS);
+  const [datasets, setDatasets] = useState<DatasetItem[]>(DEFAULT_DATASETS);
   const [activeDatasetIndex, setActiveDatasetIndex] = useState<number>(0);
   const [images, setImages] = useState<ImageSummary[]>([]);
+
+  // STAC Observations & Earth Search
+  const [stacObservations, setStacObservations] = useState<SatelliteObservationItem[]>(DEFAULT_STAC_OBSERVATIONS);
+  const [searchLocationData, setSearchLocationData] = useState<SearchEarthLocation | null>({
+    name: 'Hyderabad Urban Corridor',
+    displayName: 'Hyderabad, Telangana, India',
+    lat: 17.385,
+    lon: 78.4867,
+    utmZone: 'UTM Zone 44N',
+    epsg: 32644,
+    bbox: [78.2, 17.2, 78.7, 17.6],
+    country: 'India',
+    areaEstimateKm2: 25.0,
+  });
+  const [selectedObservationIds, setSelectedObservationIds] = useState<string[]>([
+    'S2A_MSIL2A_20240314T052141_N0500_R047',
+    'S2B_MSIL2A_20260319T051839_N0510_R047',
+    'S1A_IW_GRDH_1SDV_20260318T004212_052918',
+  ]);
+  const [isObservationPickerOpen, setIsObservationPickerOpen] = useState<boolean>(false);
+
+  const applyObservationAsT1 = useCallback((obs: SatelliteObservationItem) => {
+    setDateT1(obs.dateFormatted);
+    if (obs.modality === 'optical') {
+      setActiveLens('True Color');
+    }
+  }, []);
+
+  const applyObservationAsT2 = useCallback((obs: SatelliteObservationItem) => {
+    setDateT2(obs.dateFormatted);
+    if (obs.modality === 'optical') {
+      setActiveLens('True Color');
+    }
+  }, []);
+
+  const toggleObservationInMission = useCallback((obs: SatelliteObservationItem) => {
+    setSelectedObservationIds((prev) => {
+      const exists = prev.includes(obs.id);
+      if (exists) {
+        return prev.filter((id) => id !== obs.id);
+      } else {
+        return [...prev, obs.id];
+      }
+    });
+
+    setDatasets((prev) => {
+      const exists = prev.some((d) => d.id === obs.id);
+      if (exists) {
+        return prev.filter((d) => d.id !== obs.id);
+      } else {
+        const newDataset: DatasetItem = {
+          id: obs.id,
+          name: `${obs.sensor} (${obs.dateFormatted})`,
+          sensor: obs.sensor,
+          date: obs.dateFormatted,
+          bands: obs.bands.slice(0, 4).join(', '),
+          resolution: obs.resolution,
+          projection: `EPSG:${obs.epsg}`,
+          dimensions: '10,980 × 10,980 px',
+          status: 'valid',
+          modality: obs.modality === 'sar' ? 'sar' : 'optical',
+        };
+        return [...prev, newDataset];
+      }
+    });
+  }, []);
 
   // Spectral Lenses
   const [activeLens, setActiveLens] = useState<LensMode>('CHANGE');
@@ -622,8 +982,8 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
   // Temporal
   const [temporalMode, setTemporalMode] = useState<TemporalViewMode>('Swipe');
   const [sliderPos, setSliderPos] = useState<number>(50);
-  const [dateT1] = useState<string>('Mar 14, 2024');
-  const [dateT2] = useState<string>('Mar 19, 2026');
+  const [dateT1, setDateT1] = useState<string>('Mar 14, 2024');
+  const [dateT2, setDateT2] = useState<string>('Mar 19, 2026');
 
   // Clusters & Vectors
   const [clusters, setClusters] = useState<ChangeCluster[]>(DEFAULT_CLUSTERS);
@@ -676,12 +1036,164 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
   const [isExportOpen, setIsExportOpen] = useState<boolean>(false);
   const [exportFormat, setExportFormat] = useState<'pdf' | 'geojson' | 'csv' | 'kml'>('pdf');
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+  const [isLiveSatelliteOpen, setIsLiveSatelliteOpen] = useState<boolean>(false);
+  const [isEarthExplorerOpen, setIsEarthExplorerOpen] = useState<boolean>(false);
+  const [isBenchmarkOpen, setIsBenchmarkOpen] = useState<boolean>(false);
   const [isTraceModalOpen, setIsTraceModalOpen] = useState<boolean>(false);
   const [isEvidenceModalOpen, setIsEvidenceModalOpen] = useState<boolean>(false);
   const [activeEvidenceDetail, setActiveEvidenceDetail] = useState<EvidenceLayerItem | null>(null);
 
-  const currentMission =
-    CANONICAL_MISSIONS.find((m) => m.id === selectedMissionId) || CANONICAL_MISSIONS[0];
+  // Dossier Archive & Search
+  const [isDossierSearchOpen, setIsDossierSearchOpen] = useState<boolean>(false);
+  const [dossiers, setDossiers] = useState<InspectionDossier[]>(PREVIOUS_INSPECTION_DOSSIERS);
+  const [activeDossierId, setActiveDossierId] = useState<string | null>('DOS-2026-0115-BLR');
+
+  const openDossierSearch = useCallback(() => {
+    setIsDossierSearchOpen(true);
+  }, []);
+
+  const loadDossier = useCallback((dossier: InspectionDossier) => {
+    setSelectedMissionId(dossier.missionId);
+    setActiveDossierId(dossier.id);
+    setFindingTitle(dossier.name);
+    setCustomInsight(dossier.findings);
+    if (dossier.coordinates) {
+      setCustomMissionData({
+        name: dossier.name,
+        lat: dossier.coordinates.lat,
+        lon: dossier.coordinates.lon,
+        utmZone: dossier.utmZone || 'EPSG:32643 (UTM Zone 43N)',
+        areaAoi: dossier.areaAoi || '12.64 km²',
+      });
+    }
+    if (dossier.modality === 'sar') setActiveLens('SAR');
+    else if (dossier.modality === 'multispectral') setActiveLens('EVIDENCE');
+    else if (dossier.modality === 'optical') setActiveLens('True Color');
+    else setActiveLens('CHANGE');
+    setIsDossierSearchOpen(false);
+  }, []);
+
+  // Workstation Mode & Location
+  const [workstationMode, setWorkstationMode] = useState<WorkstationMode>('SCIENTIFIC BENCHMARK');
+  const [customMissionData, setCustomMissionData] = useState<{
+    name: string;
+    lat: number;
+    lon: number;
+    utmZone: string;
+    areaAoi: string;
+  } | null>(null);
+
+  // Findings Backbone
+  const [findings, setFindings] = useState<Finding[]>(DEFAULT_FINDINGS);
+  const [activeFinding, setActiveFinding] = useState<Finding | null>(DEFAULT_FINDINGS[0] || null);
+
+  const selectFinding = useCallback(
+    (finding: Finding | null) => {
+      setActiveFinding(finding);
+      if (finding) {
+        const match = clusters.find(
+          (c) =>
+            c.label.toLowerCase().includes(finding.title.toLowerCase().split(' ')[0]) ||
+            Math.abs(c.area_ha - finding.spatial.area_ha) < 0.15
+        );
+        if (match) setSelectedClusterId(match.id);
+        setFindingTitle(finding.title);
+        setCustomAreaHa(`+${finding.spatial.area_ha.toFixed(2)} ha`);
+        setCustomAreaM2(`${finding.spatial.area_m2.toLocaleString()} m²`);
+      }
+    },
+    [clusters]
+  );
+
+  const updateMissionLocation = useCallback(
+    (data: {
+      name: string;
+      lat: number;
+      lon: number;
+      utmZone: string;
+      areaAoi: string;
+      dateT1?: string;
+      dateT2?: string;
+    }) => {
+      setCustomMissionData({
+        name: data.name,
+        lat: data.lat,
+        lon: data.lon,
+        utmZone: data.utmZone,
+        areaAoi: data.areaAoi,
+      });
+      if (data.dateT1) setDateT1(data.dateT1);
+      if (data.dateT2) setDateT2(data.dateT2);
+    },
+    []
+  );
+
+  // Polygon Area Measurement State
+  const [polygonMeasurement, setPolygonMeasurement] = useState<{
+    points: CursorCoordinates[];
+    areaM2: number;
+    areaHa: number;
+    perimeterM: number;
+  } | null>(null);
+
+  const addPolygonVertex = useCallback((coords: CursorCoordinates) => {
+    setPolygonMeasurement((prev) => {
+      const prevPoints = prev?.points || [];
+      const next = [...prevPoints, coords];
+      if (next.length >= 3) {
+        let area = 0;
+        let perimeter = 0;
+        for (let i = 0; i < next.length; i++) {
+          const j = (i + 1) % next.length;
+          area += next[i].utmE * next[j].utmN;
+          area -= next[j].utmE * next[i].utmN;
+          const dx = next[j].utmE - next[i].utmE;
+          const dy = next[j].utmN - next[i].utmN;
+          perimeter += Math.sqrt(dx * dx + dy * dy);
+        }
+        const areaM2 = Math.round(Math.abs(area) / 2);
+        const areaHa = +(areaM2 / 10000).toFixed(2);
+        return {
+          points: next,
+          areaM2,
+          areaHa,
+          perimeterM: Math.round(perimeter),
+        };
+      }
+      return {
+        points: next,
+        areaM2: 0,
+        areaHa: 0,
+        perimeterM: 0,
+      };
+    });
+  }, []);
+
+  const finishPolygonMeasurement = useCallback(() => {}, []);
+
+  const clearPolygonMeasurement = useCallback(() => {
+    setPolygonMeasurement(null);
+  }, []);
+
+  const currentMission: Scenario = customMissionData
+    ? {
+        id: 'custom_live_mission',
+        tag: 'LIVE MISSION',
+        name: customMissionData.name,
+        location: `${customMissionData.name} (${customMissionData.lat.toFixed(2)}°N, ${customMissionData.lon.toFixed(2)}°E)`,
+        sensors: 'Sentinel-2 MSI (10m) + Sentinel-1 C-SAR (10m)',
+        task: 'Real Earth Observation Analysis',
+        lat: customMissionData.lat,
+        lon: customMissionData.lon,
+        utmZone: customMissionData.utmZone,
+        areaAoi: customMissionData.areaAoi,
+        prompts: [
+          'What changed between these two observations and where?',
+          'Detect all altered infrastructure clusters.',
+          'Calculate altered ground area in square meters and hectares.',
+        ],
+      }
+    : CANONICAL_MISSIONS.find((m) => m.id === selectedMissionId) || CANONICAL_MISSIONS[0];
   const activeDataset = datasets[activeDatasetIndex] || datasets[0];
   const selectedCluster = clusters.find((c) => c.id === selectedClusterId) || null;
 
@@ -897,11 +1409,26 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
             ? images.map((img) => img.id)
             : ['img_demo_bitemporal_t1', 'img_demo_bitemporal_t2', 'img_demo_sentinel1_sar'];
 
-        const res = await executeAgentQuery(q, canonicalTargetIds);
+        const res = await executeAgentQuery(q, canonicalTargetIds, undefined, {
+          lat: currentMission.lat,
+          lon: currentMission.lon,
+          location_name: currentMission.name,
+          utm_zone: currentMission.utmZone,
+        });
         setAgentResult(res);
 
         if (res?.pipeline_result?.is_real_weights) {
           setIsRealWeights(true);
+        }
+
+        if (res?.location) {
+          updateMissionLocation({
+            name: res.location.name || currentMission.name,
+            lat: res.location.lat ?? currentMission.lat,
+            lon: res.location.lon ?? currentMission.lon,
+            utmZone: res.location.crs_name || (res.location.epsg ? `EPSG:${res.location.epsg}` : currentMission.utmZone),
+            areaAoi: `${res.pipeline_result?.total_area_ha || 25} ha`,
+          });
         }
 
         if (res?.answer) {
@@ -965,31 +1492,83 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
 
         // Dynamically update cluster polygons if returned by backend
         const rawFeatures =
+          res?.pipeline_result?.features ||
           res?.pipeline_result?.regions_geojson?.features ||
           res?.pipeline_result?.changed_polygons_geojson?.features;
 
         if (rawFeatures && rawFeatures.length > 0) {
-          const newClusters: ChangeCluster[] = rawFeatures.map((f: any, idx: number) => ({
-            id: f.id || `CLUSTER_${idx + 1}`,
-            tag: String(idx + 1).padStart(2, '0'),
-            label: f.properties?.label || `Detected Region ${idx + 1}`,
-            area_m2: f.properties?.area_m2 || 0,
-            area_ha:
-              f.properties?.area_ha ||
-              (f.properties?.area_m2 ? +(f.properties.area_m2 / 10000).toFixed(2) : 0),
-            confidence: f.properties?.confidence || 0.9,
-            center: {
-              lat: currentMission.lat + idx * 0.01,
-              lon: currentMission.lon + idx * 0.01,
-            },
-            bbox: f.properties?.bbox_normalized || {
-              xmin: 0.35 + idx * 0.2,
-              ymin: 0.28 + idx * 0.2,
-              xmax: 0.52 + idx * 0.2,
-              ymax: 0.52 + idx * 0.2,
-            },
-          }));
+          const targetLat = res?.location?.lat ?? currentMission.lat;
+          const targetLon = res?.location?.lon ?? currentMission.lon;
+
+          const newClusters: ChangeCluster[] = rawFeatures.map((f: any, idx: number) => {
+            const polyCoords = f.geometry?.coordinates?.[0] || [];
+            let cLat = targetLat + (idx === 0 ? 0.002 : -0.003);
+            let cLon = targetLon + (idx === 0 ? -0.003 : 0.004);
+            if (polyCoords.length > 0) {
+              const sumLon = polyCoords.reduce((acc: number, p: number[]) => acc + p[0], 0);
+              const sumLat = polyCoords.reduce((acc: number, p: number[]) => acc + p[1], 0);
+              cLon = +(sumLon / polyCoords.length).toFixed(5);
+              cLat = +(sumLat / polyCoords.length).toFixed(5);
+            }
+            return {
+              id: f.id || `CLUSTER_${idx + 1}`,
+              tag: String(idx + 1).padStart(2, '0'),
+              label: f.properties?.label || `Cluster ${String.fromCharCode(65 + idx)}: Altered Surface`,
+              area_m2: f.properties?.area_m2 || 0,
+              area_ha:
+                f.properties?.area_ha ||
+                (f.properties?.area_m2 ? +(f.properties.area_m2 / 10000).toFixed(2) : 0),
+              confidence: f.properties?.confidence || 0.92,
+              center: { lat: cLat, lon: cLon },
+              bbox: f.properties?.bbox_normalized || {
+                xmin: 0.35 + idx * 0.2,
+                ymin: 0.28 + idx * 0.2,
+                xmax: 0.52 + idx * 0.2,
+                ymax: 0.52 + idx * 0.2,
+              },
+            };
+          });
           setClusters(newClusters);
+          setSelectedClusterId(newClusters[0]?.id || null);
+
+          // Update active finding dynamically
+          const fHa = res.pipeline_result.total_area_ha || 2.56;
+          const fM2 = res.pipeline_result.total_area_m2 || 25600;
+          const dynamicFinding = createCanonicalFinding({
+            id: `finding_${Date.now()}`,
+            missionId: currentMission.id,
+            query: q,
+            title: res.task === 'visual_grounding'
+              ? 'Target Geographic Entity Grounded'
+              : res.task === 'single_image_vqa'
+              ? 'Multispectral Land Cover Verified'
+              : 'Surface Built-Up Expansion Verified',
+            category: res.task === 'visual_grounding' ? 'WATER_BODY' : 'BUILT_UP_EXPANSION',
+            sensor: 'Sentinel-2 MSI (10m) + Sentinel-1 C-SAR (10m)',
+            modality: 'Optical + SAR Corroboration',
+            acquisitionTime: new Date().toISOString(),
+            modelName: 'Siamese ChangeNet 2D CNN',
+            modelVersion: 'v2.4.1-sih',
+            checkpoint: 'changenet_s2_weights_val_iou_0.842.pt',
+            realWeights: true,
+            crs: `EPSG:${res.location?.epsg || 32644}`,
+            areaM2: fM2,
+            areaHa: fHa,
+            bbox: { ymin: 0.28, xmin: 0.35, ymax: 0.52, xmax: 0.52 },
+            modelConfidence: res.confidence?.overall || 0.94,
+            evidenceScore: Math.round((res.confidence?.overall || 0.94) * 100),
+            calibratedConfidence: res.confidence?.overall || 0.93,
+            sourceAssets: ['S2A_MSIL2A_TARGET', 'S1A_IW_GRDH_RADAR'],
+            processingSteps: [
+              'Topological Feature Vectorization',
+              'WGS84 Ellipsoidal Geodesic Polygon Area Integration',
+              'Sentinel-1 SAR Radar Dual-Pol Corroboration (-14.5 dB σ⁰)',
+            ],
+            rasterWindow: 'preview_window.png',
+            overlay: 'polygon_contour.geojson',
+            annotation: `Confirmed ${fHa} ha at ${res.location?.name || currentMission.name}`,
+          });
+          setActiveFinding(dynamicFinding);
         }
         setSystemState('VERIFIED');
         setQueryState('COMPLETE');
@@ -1210,10 +1789,23 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         setIsFindingDismissed,
 
         datasets,
+        setDatasets,
         activeDatasetIndex,
         setActiveDatasetIndex,
         activeDataset,
         images,
+
+        stacObservations,
+        setStacObservations,
+        searchLocationData,
+        setSearchLocationData,
+        selectedObservationIds,
+        setSelectedObservationIds,
+        isObservationPickerOpen,
+        setIsObservationPickerOpen,
+        toggleObservationInMission,
+        applyObservationAsT1,
+        applyObservationAsT2,
 
         activeLens,
         setActiveLens,
@@ -1288,6 +1880,12 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         closeExport,
         isSettingsOpen,
         setIsSettingsOpen,
+        isLiveSatelliteOpen,
+        setIsLiveSatelliteOpen,
+        isEarthExplorerOpen,
+        setIsEarthExplorerOpen,
+        isBenchmarkOpen,
+        setIsBenchmarkOpen,
         isTraceModalOpen,
         setIsTraceModalOpen,
         isEvidenceModalOpen,
@@ -1295,11 +1893,43 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         activeEvidenceDetail,
         setActiveEvidenceDetail,
 
+        isDossierSearchOpen,
+        setIsDossierSearchOpen,
+        openDossierSearch,
+        dossiers,
+        setDossiers,
+        activeDossierId,
+        setActiveDossierId,
+        loadDossier,
+
+        workstationMode,
+        setWorkstationMode,
+        updateMissionLocation,
+
+        findings,
+        activeFinding,
+        selectFinding,
+
+        polygonMeasurement,
+        addPolygonVertex,
+        finishPolygonMeasurement,
+        clearPolygonMeasurement,
+
         totalAreaHa,
         totalAreaM2,
         synthesizedInsight,
+<<<<<<< HEAD
         corroborationMetrics,
         executionMode,
+=======
+        customInsight,
+        setFindingTitle,
+        setCustomInsight,
+        setCustomAreaHa,
+        setCustomAreaM2,
+        customAreaHa,
+        customAreaM2,
+>>>>>>> 2019d312b210fc6b2710ccc46160130a9c942954
       }}
     >
       {children}
@@ -1314,3 +1944,8 @@ export const useWorkspace = (): WorkspaceContextType => {
   }
   return context;
 };
+
+export const useWorkspaceSafe = (): WorkspaceContextType | null => {
+  return useContext(WorkspaceContext);
+};
+

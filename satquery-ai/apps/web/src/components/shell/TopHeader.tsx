@@ -1,10 +1,21 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Target,
   ChevronDown,
   Check,
+  Globe,
+  FileText,
+  ShieldCheck,
+  Sparkles,
+  Search,
+  FolderArchive,
+  Calendar,
+  X,
+  Compass,
+  Layers,
+  Settings,
 } from 'lucide-react';
 import { useWorkspace, Scenario, CANONICAL_MISSIONS } from '../../context/WorkspaceContext';
 
@@ -37,98 +48,241 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   }, []);
 
   const currentMission = ws.currentMission;
+  const [filterQuery, setFilterQuery] = useState<string>('');
+  const [filterYear, setFilterYear] = useState<string>('ALL');
+
+  // Filtered missions for quick selection
+  const filteredMissions = useMemo(() => {
+    return CANONICAL_MISSIONS.filter((m) => {
+      if (filterYear !== 'ALL') {
+        const hasYear = m.dateT1?.startsWith(filterYear) || m.dateT2?.startsWith(filterYear);
+        if (!hasYear) return false;
+      }
+      if (filterQuery.trim()) {
+        const q = filterQuery.toLowerCase().trim();
+        const matchesName = m.name.toLowerCase().includes(q);
+        const matchesLoc = m.location.toLowerCase().includes(q);
+        const matchesTag = m.tag.toLowerCase().includes(q);
+        const matchesDate = (m.dateT1 && m.dateT1.includes(q)) || (m.dateT2 && m.dateT2.includes(q));
+        if (!matchesName && !matchesLoc && !matchesTag && !matchesDate) return false;
+      }
+      return true;
+    });
+  }, [filterQuery, filterYear]);
 
   return (
-    <header className="h-14 shrink-0 bg-white border-b border-[#E6E6E1] px-6 flex items-center justify-between z-30 select-none">
-      {/* Left: Brand & Subtitle */}
-      <div className="flex items-center gap-3">
-        <div className="w-7 h-7 rounded-full bg-[#111111] flex items-center justify-center text-white shadow-sm">
-          <Target className="w-3.5 h-3.5 text-white stroke-[2.4]" />
+    <header className="h-11 shrink-0 bg-[#0A0A0A] border-b border-[#222222] px-5 flex items-center justify-between z-30 select-none text-white">
+      {/* Left: Brand & Micro Subtitle */}
+      <div className="flex items-center gap-2.5">
+        <div className="w-5 h-5 rounded bg-white flex items-center justify-center text-black">
+          <Target className="w-3.5 h-3.5 stroke-[2.4]" />
         </div>
-        <div>
-          <div className="font-sans font-bold text-xs tracking-tight text-[#111111] leading-none">
+        <div className="flex items-baseline gap-2">
+          <span className="font-mono font-bold text-xs tracking-tight text-neutral-100">
             SATQUERY AI
-          </div>
-          <div className="text-[9px] font-mono font-semibold tracking-wider text-[#888888] uppercase mt-0.5">
-            Earth Observation Intelligence
-          </div>
+          </span>
+          <span className="hidden sm:inline text-[9px] font-mono tracking-widest text-neutral-500 uppercase">
+            EARTH OBSERVATION INTELLIGENCE
+          </span>
         </div>
       </div>
 
-      {/* Center: Mission Selector */}
+      {/* Center: Mission Selector with Search Filter */}
       <div className="relative" ref={missionRef}>
         <button
           onClick={() => setIsMissionDropdownOpen((prev) => !prev)}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[#E6E6E1] bg-[#FAF9F7] hover:bg-[#F3F3F0] text-xs font-semibold text-[#111111] transition-colors"
+          className="flex items-center gap-2 text-xs text-neutral-300 hover:text-white transition-colors group py-1 px-2 rounded hover:bg-neutral-900"
         >
-          <span className="font-mono text-[10px] text-[#6F6F6A] font-bold">
+          <span className="font-mono text-[10px] text-neutral-500 font-bold uppercase tracking-wider">
             {currentMission.tag}
           </span>
-          <span>{currentMission.name}</span>
-          <ChevronDown className="w-3.5 h-3.5 text-[#6F6F6A]" />
+          <span className="font-medium text-neutral-200 group-hover:text-white transition-colors">
+            {currentMission.name}
+          </span>
+          <ChevronDown className="w-3 h-3 text-neutral-500 group-hover:text-neutral-300 transition-transform duration-150" />
         </button>
 
         {isMissionDropdownOpen && (
-          <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1.5 w-84 bg-white border border-[#E6E6E1] rounded-2xl shadow-2xl py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
-            <div className="px-3.5 py-1.5 text-[9px] font-mono font-bold tracking-wider text-[#888888] uppercase border-b border-[#F0EFEA]">
-              CANONICAL MISSIONS SUITE
-            </div>
-            <div className="p-1.5 space-y-1">
-              {CANONICAL_MISSIONS.map((m) => {
-                const isSelected = ws.selectedMissionId === m.id;
-                return (
+          <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1.5 w-88 bg-[#141414] border border-[#2A2A2A] rounded-xl shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-150 font-mono text-xs">
+            {/* Header & Search Bar */}
+            <div className="p-2.5 border-b border-[#222222] bg-[#111111] space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[9px] font-bold tracking-widest text-neutral-400 uppercase">
+                  FILTER DOSSIERS & MISSIONS
+                </span>
+                <span className="text-[9px] text-neutral-500">
+                  {filteredMissions.length} matched
+                </span>
+              </div>
+              <div className="relative">
+                <Search className="w-3 h-3 text-neutral-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Filter by date or name (e.g. 2026, Bangalore)..."
+                  value={filterQuery}
+                  onChange={(e) => setFilterQuery(e.target.value)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-full bg-[#1A1A1A] border border-[#2E2E2E] rounded-md pl-7 pr-6 py-1.5 text-xs text-neutral-200 placeholder:text-neutral-500 focus:outline-none focus:border-neutral-500 font-sans"
+                />
+                {filterQuery && (
                   <button
-                    key={m.id}
-                    onClick={() => {
-                      ws.selectMission(m.id);
-                      setIsMissionDropdownOpen(false);
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFilterQuery('');
                     }}
-                    className={`w-full text-left p-2.5 rounded-xl text-xs transition-all flex items-start justify-between ${
-                      isSelected
-                        ? 'bg-[#FAF9F7] text-[#111111] font-bold ring-1 ring-[#E6E6E1]'
-                        : 'text-[#444444] hover:bg-[#F7F7F5]'
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-200"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-1 pt-0.5">
+                <span className="text-[9px] text-neutral-500 mr-1">Date:</span>
+                {(['ALL', '2026', '2025', '2024'] as const).map((yr) => (
+                  <button
+                    key={yr}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFilterYear(yr);
+                    }}
+                    className={`px-2 py-0.5 rounded text-[10px] font-mono transition-colors ${
+                      filterYear === yr
+                        ? 'bg-neutral-200 text-black font-bold'
+                        : 'bg-[#1F1F1F] text-neutral-400 hover:text-white'
                     }`}
                   >
-                    <div>
-                      <div className="font-mono text-[10px] text-[#6F6F6A] font-bold">{m.tag}</div>
-                      <div className="mt-0.5">{m.name}</div>
-                      <div className="text-[10px] text-[#888888] font-mono mt-0.5">{m.location}</div>
-                    </div>
-                    {isSelected && <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-1" />}
+                    {yr}
                   </button>
-                );
-              })}
+                ))}
+              </div>
             </div>
+
+            {/* Missions List */}
+            <div className="p-1 max-h-64 overflow-y-auto space-y-0.5">
+              {filteredMissions.length === 0 ? (
+                <div className="p-4 text-center text-neutral-500 text-[11px]">
+                  No matching dossiers found.
+                </div>
+              ) : (
+                filteredMissions.map((m) => {
+                  const isSelected = ws.selectedMissionId === m.id;
+                  return (
+                    <button
+                      key={m.id}
+                      onClick={() => {
+                        ws.selectMission(m.id);
+                        setIsMissionDropdownOpen(false);
+                      }}
+                      className={`w-full text-left p-2 rounded-lg text-xs transition-all flex items-start justify-between ${
+                        isSelected
+                          ? 'bg-neutral-800 text-white font-bold'
+                          : 'text-neutral-400 hover:bg-neutral-900 hover:text-neutral-200'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] text-neutral-400 font-bold">{m.tag}</span>
+                          {(m.dateT1 || m.dateT2) && (
+                            <span className="text-[9px] text-emerald-400 bg-emerald-950/60 px-1 py-0.2 rounded border border-emerald-800/60">
+                              {m.dateT2 || m.dateT1}
+                            </span>
+                          )}
+                        </div>
+                        <div className="font-sans font-medium text-neutral-200 text-xs mt-0.5">{m.name}</div>
+                        <div className="text-[10px] text-neutral-500 mt-0.5">{m.location}</div>
+                      </div>
+                      {isSelected && <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-1" />}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Bottom Archive Link */}
+            <button
+              onClick={() => {
+                setIsMissionDropdownOpen(false);
+                ws.toggleDrawer('analysis');
+              }}
+              className="w-full text-left p-2.5 border-t border-[#222222] bg-[#111111] text-[11px] font-mono text-emerald-400 hover:bg-[#1A1A1A] hover:text-emerald-300 transition-colors flex items-center justify-between"
+            >
+              <span className="flex items-center gap-1.5">
+                <FolderArchive className="w-3.5 h-3.5" />
+                <span>Open Analyses Archive...</span>
+              </span>
+              <span className="text-[9px] text-neutral-500">Search & Restore Saved Analyses</span>
+            </button>
           </div>
         )}
       </div>
 
-      {/* Right: Quick Tabs (Workspace, Evidence, Reports) & Status Pill */}
-      <div className="flex items-center gap-4">
-        {/* Navigation Links */}
-        <div className="flex items-center gap-1 text-xs font-semibold text-[#6F6F6A]">
+      {/* Right: Subordinate Navigation & Quiet Status Indicator */}
+      <div className="flex items-center gap-2.5">
+        {/* Clean Primary Product Navigation */}
+        <nav className="flex items-center gap-1 text-[11px] font-mono text-neutral-400">
           <button
-            onClick={() => ws.closeDrawer()}
-            className="px-3 py-1.5 rounded-lg hover:text-[#111111] hover:bg-[#FAF9F7] transition-colors"
+            onClick={() => {
+              ws.closeDrawer();
+              ws.setActiveTab('workspace');
+            }}
+            className={`px-2 py-1 rounded transition-colors flex items-center gap-1 ${
+              ws.activeDrawer === null && ws.activeTab === 'workspace'
+                ? 'text-white bg-neutral-900 font-bold'
+                : 'hover:text-white hover:bg-neutral-900'
+            }`}
+            title="Return to Main Workspace View"
           >
-            Workspace
+            <Compass className="w-3 h-3 text-neutral-400" />
+            <span>Workspace</span>
           </button>
+
           <button
-            onClick={() => ws.toggleDrawer('evidence')}
-            className="px-3 py-1.5 rounded-lg hover:text-[#111111] hover:bg-[#FAF9F7] transition-colors"
+            onClick={() => ws.toggleDrawer('scene')}
+            className={`px-2 py-1 rounded transition-colors flex items-center gap-1 ${
+              ws.activeDrawer === 'scene'
+                ? 'text-white bg-neutral-900 font-bold'
+                : 'hover:text-white hover:bg-neutral-900'
+            }`}
+            title="Imagery & Observations Catalog"
           >
-            Evidence
+            <Layers className="w-3 h-3 text-neutral-400" />
+            <span>Imagery</span>
           </button>
+
+          <button
+            onClick={() => ws.toggleDrawer('analysis')}
+            className={`px-2 py-1 rounded transition-colors flex items-center gap-1 ${
+              ws.activeDrawer === 'analysis'
+                ? 'text-emerald-400 bg-neutral-900 font-bold'
+                : 'hover:text-white hover:bg-neutral-900'
+            }`}
+            title="Saved & Recent Analyses"
+          >
+            <FolderArchive className="w-3 h-3 text-emerald-400" />
+            <span className="text-neutral-200">Analyses</span>
+          </button>
+
           <button
             onClick={() => ws.openExport('pdf')}
-            className="px-3 py-1.5 rounded-lg hover:text-[#111111] hover:bg-[#FAF9F7] transition-colors"
+            className="px-2 py-1 rounded hover:text-white hover:bg-neutral-900 transition-colors flex items-center gap-1"
+            title="Export Mission Audit Dossier"
           >
-            Reports
+            <FileText className="w-3 h-3 text-neutral-400" />
+            <span>Reports</span>
           </button>
-        </div>
 
-        <span className="w-px h-4 bg-[#E6E6E1]" />
+          <button
+            onClick={() => {
+              if (propOnOpenSettings) propOnOpenSettings();
+              else ws.setIsSettingsOpen(true);
+            }}
+            className="p-1 rounded hover:text-white hover:bg-neutral-900 transition-colors text-neutral-400"
+            title="System Settings & Node Clusters"
+          >
+            <Settings className="w-3.5 h-3.5" />
+          </button>
 
+<<<<<<< HEAD
         {/* Execution Mode & Unified System State Indicators */}
         <div className="flex items-center gap-2">
           <span className={`px-2.5 py-1 rounded-full text-[10px] font-mono font-bold tracking-wider uppercase border ${
@@ -162,6 +316,37 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
               </>
             )}
           </div>
+=======
+          <button
+            onClick={() => ws.toggleDrawer('chat')}
+            className={`px-2 py-1 rounded transition-colors flex items-center gap-1 font-medium ml-0.5 ${
+              ws.activeDrawer === 'chat'
+                ? 'bg-satblue-500 text-white shadow-sm'
+                : 'bg-white/10 hover:bg-white/20 text-white'
+            }`}
+            title="Open SatQuery AI Copilot Conversation"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+            <span className="hidden sm:inline">Copilot</span>
+          </button>
+        </nav>
+
+        <span className="w-px h-3 bg-neutral-800" />
+
+        {/* Quiet Minimal Status Indicator */}
+        <div className="flex items-center gap-1.5 text-[10px] font-mono text-neutral-400">
+          {ws.systemState === 'ANALYZING' ? (
+            <>
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+              <span className="text-amber-300">ANALYZING</span>
+            </>
+          ) : (
+            <>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span className="text-neutral-400">READY</span>
+            </>
+          )}
+>>>>>>> 2019d312b210fc6b2710ccc46160130a9c942954
         </div>
       </div>
     </header>

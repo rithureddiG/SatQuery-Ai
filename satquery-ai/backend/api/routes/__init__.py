@@ -9,6 +9,7 @@ from .analysis import router as analysis_router
 from .evidence import router as evidence_router
 from .reports import router as reports_router
 from .evaluation import router as evaluation_router
+from .stac import router as stac_router
 
 __all__ = [
     "health_router",
@@ -20,4 +21,5 @@ __all__ = [
     "evidence_router",
     "reports_router",
     "evaluation_router",
+    "stac_router",
 ]

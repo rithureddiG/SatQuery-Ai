@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { X, MapPin, Database, Check, Layers, ArrowUpRight } from 'lucide-react';
+import { X, MapPin, Database, Check, Layers, ArrowUpRight, FolderArchive } from 'lucide-react';
 import { useWorkspace } from '../../context/WorkspaceContext';
 
 interface SceneDrawerProps {
@@ -103,8 +103,22 @@ export const SceneDrawer: React.FC<SceneDrawerProps> = ({ isOpen, onClose }) => 
           </div>
         </div>
 
-        {/* Action: Ingest New Dataset */}
-        <div className="pt-2">
+        {/* Action: Ingest New Dataset or Search Dossiers */}
+        <div className="pt-2 space-y-2">
+          <button
+            onClick={() => {
+              onClose();
+              ws.setIsDossierSearchOpen(true);
+            }}
+            className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-[#E6E6E1] bg-white hover:bg-[#FAF9F7] text-xs font-semibold text-[#111111] transition-all group"
+          >
+            <div className="flex items-center gap-2">
+              <FolderArchive className="w-4 h-4 text-emerald-600" />
+              <span>Search Previous Dossiers (Date/Name)</span>
+            </div>
+            <ArrowUpRight className="w-4 h-4 text-[#6F6F6A] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+          </button>
+
           <button
             onClick={() => {
               onClose();

@@ -2,8 +2,12 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'SatQuery AI — Multimodal Remote Sensing Assistant',
+  title: 'SatQuery AI',
   description: 'Interactive Vision-Language Assistant for Multimodal Remote Sensing Image Analysis',
+  openGraph: {
+    title: 'SatQuery AI',
+    description: 'Interactive Vision-Language Assistant for Multimodal Remote Sensing Image Analysis',
+  },
 };
 
 export default function RootLayout({

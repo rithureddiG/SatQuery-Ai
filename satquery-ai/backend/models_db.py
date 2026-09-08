@@ -20,6 +20,10 @@ class AOI(Base):
     description = Column(String, nullable=True)
     geometry = Column(JSON, nullable=True)  # GeoJSON Polygon / MultiPolygon
     geometry_geojson = Column(JSON, nullable=True)
+    area_ha = Column(Float, nullable=True)
+    perimeter_m = Column(Float, nullable=True)
+    bbox = Column(JSON, nullable=True)
+    crs = Column(String, default="EPSG:4326")
     created_at = Column(DateTime, default=datetime.utcnow)
 
     images = relationship("ImageRecord", back_populates="aoi", cascade="all, delete-orphan")
@@ -62,9 +66,32 @@ class AnalysisJob(Base):
     task = Column(String, nullable=False)
     status = Column(String, default="pending")  # pending, running, completed, failed
     question = Column(String, nullable=True)
+    query = Column(String, nullable=True)
     result = Column(JSON, nullable=True)
-    confidence = Column(Float, nullable=True)
+    result_json = Column(JSON, nullable=True)
+    confidence = Column(JSON, nullable=True)
+    confidence_json = Column(JSON, nullable=True)
+    execution_time_ms = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    def __init__(self, **kwargs):
+        # Normalize synonyms
+        if "query" in kwargs and "question" not in kwargs:
+            kwargs["question"] = kwargs["query"]
+        elif "question" in kwargs and "query" not in kwargs:
+            kwargs["query"] = kwargs["question"]
+
+        if "result_json" in kwargs and "result" not in kwargs:
+            kwargs["result"] = kwargs["result_json"]
+        elif "result" in kwargs and "result_json" not in kwargs:
+            kwargs["result_json"] = kwargs["result"]
+
+        if "confidence_json" in kwargs and "confidence" not in kwargs:
+            kwargs["confidence"] = kwargs["confidence_json"]
+        elif "confidence" in kwargs and "confidence_json" not in kwargs:
+            kwargs["confidence_json"] = kwargs["confidence"]
+
+        super().__init__(**kwargs)
 
 
 class Evidence(Base):

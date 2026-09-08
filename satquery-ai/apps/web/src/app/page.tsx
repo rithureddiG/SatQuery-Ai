@@ -23,6 +23,8 @@ import {
   ImageSummary,
 } from '../types';
 import { fetchHealth, fetchImagesList, getReportDownloadUrl } from '../lib/api';
+import { generateAnalyticalSnapshotCanvas, downloadCanvasAsPng } from '../lib/snapshotGenerator';
+import { SnapshotModal } from '../components/modals/SnapshotModal';
 import {
   LayoutGrid,
   Activity,
@@ -34,6 +36,7 @@ import {
   Table,
   Map,
   Sparkles,
+  Camera,
 } from 'lucide-react';
 
 export default function Home() {
@@ -45,6 +48,34 @@ export default function Home() {
   const [groundingFeatures, setGroundingFeatures] = useState<GroundingFeature[]>([]);
   const [changeResult, setChangeResult] = useState<ChangeAnalysisResult | null>(null);
   const [opticalSARResult, setOpticalSARResult] = useState<OpticalSARAnalysisResult | null>(null);
+
+  // Analytical Snapshot State
+  const [isSnapshotOpen, setIsSnapshotOpen] = useState<boolean>(false);
+  const [snapshotUrl, setSnapshotUrl] = useState<string | null>(null);
+  const [isGeneratingSnapshot, setIsGeneratingSnapshot] = useState<boolean>(false);
+
+  const handleGenerateSnapshot = () => {
+    setIsGeneratingSnapshot(true);
+    try {
+      const canvas = generateAnalyticalSnapshotCanvas({
+        inspectionData,
+        changeResult,
+        opticalSARResult,
+        activeEvidence,
+        health,
+        missionName: 'Bangalore Urban Corridor (Mission 05 Compound)',
+        missionLocation: 'Bangalore Urban Corridor (12.97°N, 77.59°E)',
+        missionSensors: 'Sentinel-2 MSI (10m) + Sentinel-1 SAR C-band',
+      });
+      const dataUrl = downloadCanvasAsPng(canvas);
+      setSnapshotUrl(dataUrl);
+      setIsSnapshotOpen(true);
+    } catch (err) {
+      console.error('Failed to generate snapshot:', err);
+    } finally {
+      setIsGeneratingSnapshot(false);
+    }
+  };
 
   useEffect(() => {
     fetchHealth().then(setHealth);
@@ -150,21 +181,41 @@ export default function Home() {
               Multimodal Remote Sensing Vision-Language Assistant (SIH26167 · ISRO)
             </p>
           </div>
+
+          {activeTab === 'diagnostics' && (
+            <div className="flex items-center gap-3">
+              <button
+                id="btn-diagnostic-snapshot"
+                onClick={handleGenerateSnapshot}
+                disabled={isGeneratingSnapshot}
+                className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#0A0A0A] hover:bg-[#222222] text-white text-xs font-semibold shadow-xs transition-all hover:scale-[1.02] cursor-pointer disabled:opacity-50"
+                title="Generate high-resolution print-friendly summary image of current analytical state"
+              >
+                <Camera className="w-4 h-4 text-emerald-400" />
+                <span>{isGeneratingSnapshot ? 'Generating...' : 'Snapshot'}</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {activeTab === 'diagnostics' ? (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="space-y-6">
               <UploadZone onInspectionComplete={handleInspectionComplete} />
-              {inspectionData && <MetadataPanel inspection={inspectionData} />}
-              {inspectionData && <ValidationPanel inspection={inspectionData} />}
+              {inspectionData?.metadata && <MetadataPanel metadata={inspectionData.metadata} />}
+              {inspectionData?.validation && (
+                <ValidationPanel
+                  validation={inspectionData.validation}
+                  onSnapshot={handleGenerateSnapshot}
+                />
+              )}
             </div>
 
             <div className="lg:col-span-2 space-y-6">
               {changeResult ? (
-                <ChangeViewer result={changeResult} />
+                <ChangeViewer changeResult={changeResult} />
               ) : opticalSARResult ? (
-                <OpticalSARViewer result={opticalSARResult} />
+                <OpticalSARViewer fusionResult={opticalSARResult} />
               ) : (
                 <ImageViewer inspection={inspectionData} groundingFeatures={groundingFeatures} />
               )}
@@ -328,6 +379,12 @@ export default function Home() {
           </div>
         )}
       </main>
+
+      <SnapshotModal
+        isOpen={isSnapshotOpen}
+        onClose={() => setIsSnapshotOpen(false)}
+        imageUrl={snapshotUrl}
+      />
     </div>
   );
 }
