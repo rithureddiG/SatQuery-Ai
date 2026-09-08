@@ -1,7 +1,7 @@
 """Image ingestion, inspection, and preview routes."""
 
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Any, Dict
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, status
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
@@ -207,6 +207,263 @@ def check_images_compatibility(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to check compatibility: {str(e)}",
         )
+
+
+from pydantic import BaseModel
+import numpy as np
+import rasterio
+from rasterio.windows import Window
+from rasterio.mask import mask as rasterio_mask
+import pyproj
+from shapely.geometry import shape as shapely_shape
+from shapely.ops import transform as shapely_transform
+
+
+class PixelInspectRequest(BaseModel):
+    lat: float
+    lon: float
+    compare_image_id: Optional[str] = None
+
+
+class ZonalStatsRequest(BaseModel):
+    geometry: dict
+    band_index: int = 1
+
+
+def _sample_pixel(ds: Any, lat: float, lon: float) -> dict:
+    """Helper to sample bands and compute spectral indices at a WGS84 point."""
+    if ds.crs and ds.crs.to_epsg() != 4326:
+        transformer = pyproj.Transformer.from_crs("EPSG:4326", ds.crs, always_xy=True)
+        x_proj, y_proj = transformer.transform(lon, lat)
+    else:
+        x_proj, y_proj = lon, lat
+
+    row, col = ds.index(x_proj, y_proj)
+    if row < 0 or row >= ds.height or col < 0 or col >= ds.width:
+        return {
+            "in_bounds": False,
+            "status": "out_of_bounds",
+            "lat": lat,
+            "lon": lon,
+            "row": row,
+            "col": col,
+        }
+
+    # Read window
+    window = Window(col, row, 1, 1)
+    data = ds.read(window=window)[:, 0, 0]
+
+    # Map bands
+    band_vals = {}
+    band_count = ds.count
+    band_names = ["B02", "B03", "B04", "B08", "B11", "B12"] if band_count >= 4 else [f"Band_{i+1}" for i in range(band_count)]
+    if band_count == 1:
+        band_names = ["VV_or_Intensity"]
+    elif band_count == 2:
+        band_names = ["VV", "VH"]
+
+    for idx, val in enumerate(data):
+        b_name = band_names[idx] if idx < len(band_names) else f"Band_{idx+1}"
+        # Normalize 16-bit DN if in [0, 10000] scale
+        raw_val = float(val)
+        norm_val = round(raw_val / 10000.0, 4) if raw_val > 1.0 and raw_val <= 10000 else round(raw_val, 4)
+        band_vals[b_name] = norm_val
+
+    # Compute indices
+    indices = {}
+    if band_count >= 4:
+        # standard 4-band Blue, Green, Red, NIR
+        b_blue = float(data[0])
+        b_green = float(data[1])
+        b_red = float(data[2])
+        b_nir = float(data[3])
+
+        # NDVI
+        denom_ndvi = b_nir + b_red
+        if denom_ndvi != 0:
+            indices["NDVI"] = round(float((b_nir - b_red) / denom_ndvi), 4)
+
+        # NDWI
+        denom_ndwi = b_green + b_nir
+        if denom_ndwi != 0:
+            indices["NDWI"] = round(float((b_green - b_nir) / denom_ndwi), 4)
+
+        if band_count >= 5:
+            b_swir = float(data[4])
+            denom_ndbi = b_swir + b_nir
+            if denom_ndbi != 0:
+                indices["NDBI"] = round(float((b_swir - b_nir) / denom_ndbi), 4)
+
+    elif band_count in (1, 2):
+        # SAR
+        vv_val = float(data[0])
+        indices["Sigma0_VV_dB"] = round(10.0 * float(np.log10(max(vv_val, 1e-8))), 2)
+        if band_count >= 2:
+            vh_val = float(data[1])
+            indices["Sigma0_VH_dB"] = round(10.0 * float(np.log10(max(vh_val, 1e-8))), 2)
+
+    is_nodata = False
+    if ds.nodata is not None:
+        is_nodata = any(val == ds.nodata for val in data)
+
+    res_x = abs(ds.res[0])
+    # If degree, approximate to meters (~111,320m per degree)
+    gsd_m = round(res_x * 111320.0, 2) if res_x < 0.01 else round(res_x, 2)
+
+    return {
+        "in_bounds": True,
+        "status": "ok",
+        "lat": lat,
+        "lon": lon,
+        "row": row,
+        "col": col,
+        "crs": ds.crs.to_string() if ds.crs else "EPSG:4326",
+        "gsd_meters": gsd_m,
+        "nodata": is_nodata,
+        "bands": band_vals,
+        "indices": indices,
+    }
+
+
+@router.get("/timeline")
+def get_images_timeline(db: Session = Depends(get_db)):
+    """Retrieve multi-epoch observatory timeline of all registered scenes (4-12 observations)."""
+    images = db.query(ImageRecord).order_by(ImageRecord.created_at.asc()).all()
+    timeline = []
+    for img in images:
+        meta = img.metadata_json or {}
+        asset_desc = meta.get("asset_descriptor")
+        asset_desc = asset_desc if isinstance(asset_desc, dict) else {}
+        sensor_info = asset_desc.get("sensor")
+        sensor_info = sensor_info if isinstance(sensor_info, dict) else {}
+        platform_name = sensor_info.get("platform") or ("Sentinel-2" if img.modality == "multispectral" else "Sentinel-1")
+
+        timeline.append({
+            "id": img.id,
+            "filename": img.filename,
+            "date": img.created_at.strftime("%Y-%m-%d") if img.created_at else None,
+            "created_at": img.created_at.isoformat() if img.created_at else None,
+            "modality": img.modality,
+            "platform": platform_name,
+            "cloud_cover_percentage": meta.get("cloud_cover_percentage", 0.0),
+            "resolution_m": img.resolution.get("x_res", 10.0) if isinstance(img.resolution, dict) else 10.0,
+            "crs": img.crs,
+            "bounds": img.bounds,
+            "preview_url": f"/api/v1/images/{img.id}/preview" if img.preview_path else None,
+        })
+    return {"count": len(timeline), "timeline": timeline}
+
+
+@router.post("/{image_id}/pixel-inspect")
+def inspect_image_pixel(
+    image_id: str,
+    payload: PixelInspectRequest,
+    db: Session = Depends(get_db),
+):
+    """Microscope-level pixel inspection extracting band values, indices, and T1 vs T2 deltas."""
+    img = db.get(ImageRecord, image_id)
+    if not img:
+        raise HTTPException(status_code=404, detail=f"Image {image_id} not found")
+
+    p = Path(img.path)
+    if not p.exists():
+        raise HTTPException(status_code=404, detail=f"Image raster file not found on disk: {img.path}")
+
+    try:
+        with rasterio.open(str(p)) as ds:
+            result = _sample_pixel(ds, payload.lat, payload.lon)
+            result["image_id"] = image_id
+            result["filename"] = img.filename
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Raster pixel sampling error: {str(e)}")
+
+    # If comparison image requested, sample T2 at the same coordinate
+    if payload.compare_image_id:
+        img2 = db.get(ImageRecord, payload.compare_image_id)
+        if img2 and Path(img2.path).exists():
+            try:
+                with rasterio.open(str(img2.path)) as ds2:
+                    t2_res = _sample_pixel(ds2, payload.lat, payload.lon)
+                    t2_res["image_id"] = payload.compare_image_id
+                    t2_res["filename"] = img2.filename
+
+                    comparison = {
+                        "t1_image_id": image_id,
+                        "t2_image_id": payload.compare_image_id,
+                        "t1_indices": result.get("indices", {}),
+                        "t2_indices": t2_res.get("indices", {}),
+                        "delta_indices": {},
+                    }
+                    for k, v in t2_res.get("indices", {}).items():
+                        if k in result.get("indices", {}):
+                            comparison["delta_indices"][k] = round(v - result["indices"][k], 4)
+
+                    result["comparison"] = comparison
+            except Exception as e:
+                result["comparison_error"] = str(e)
+
+    return result
+
+
+@router.post("/{image_id}/zonal-stats")
+def compute_zonal_stats(
+    image_id: str,
+    payload: ZonalStatsRequest,
+    db: Session = Depends(get_db),
+):
+    """Compute deterministic zonal statistics (count, mean, median, std, min, max, percentiles) for a polygon AOI."""
+    img = db.get(ImageRecord, image_id)
+    if not img:
+        raise HTTPException(status_code=404, detail=f"Image {image_id} not found")
+
+    p = Path(img.path)
+    if not p.exists():
+        raise HTTPException(status_code=404, detail=f"Image raster file not found on disk: {img.path}")
+
+    try:
+        poly_geom = shapely_shape(payload.geometry)
+        with rasterio.open(str(p)) as ds:
+            # Reproject geometry to dataset CRS if needed
+            if ds.crs and ds.crs.to_epsg() != 4326:
+                transformer = pyproj.Transformer.from_crs("EPSG:4326", ds.crs, always_xy=True)
+                poly_proj = shapely_transform(transformer.transform, poly_geom)
+            else:
+                poly_proj = poly_geom
+
+            band_idx = min(max(1, payload.band_index), ds.count)
+            masked_data, _ = rasterio_mask(ds, [poly_proj], crop=True, indexes=band_idx)
+
+            # Masked data shape: (1, H, W)
+            arr = masked_data[0].astype(np.float64)
+            valid_mask = np.isfinite(arr)
+            if ds.nodata is not None:
+                valid_mask &= (arr != ds.nodata)
+            # Filter zero nodata if outside boundary
+            valid_pixels = arr[valid_mask]
+
+            if valid_pixels.size == 0:
+                return {
+                    "image_id": image_id,
+                    "band_index": band_idx,
+                    "count": 0,
+                    "status": "no_valid_pixels",
+                }
+
+            return {
+                "image_id": image_id,
+                "band_index": band_idx,
+                "count": int(valid_pixels.size),
+                "min": round(float(np.min(valid_pixels)), 4),
+                "max": round(float(np.max(valid_pixels)), 4),
+                "mean": round(float(np.mean(valid_pixels)), 4),
+                "median": round(float(np.median(valid_pixels)), 4),
+                "std": round(float(np.std(valid_pixels)), 4),
+                "p25": round(float(np.percentile(valid_pixels, 25)), 4),
+                "p75": round(float(np.percentile(valid_pixels, 75)), 4),
+                "p95": round(float(np.percentile(valid_pixels, 95)), 4),
+            }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Zonal statistics computation error: {str(e)}")
 
 
 @router.get("/{image_id}/preview")
