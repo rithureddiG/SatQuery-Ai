@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { TopHeader } from './shell/TopHeader';
 import { GeoWorkspace } from './map/GeoWorkspace';
 import { QueryBar } from './query/QueryBar';
@@ -12,13 +12,8 @@ import { LayersDrawer } from './drawers/LayersDrawer';
 import { ChatAssistantDrawer } from './drawers/ChatAssistantDrawer';
 import { AnalysesDrawer } from './drawers/AnalysesDrawer';
 import { ReportExportModal } from './ReportExportModal';
-import { SettingsModal } from './modals/SettingsModal';
-import { LiveSatelliteModal } from './modals/LiveSatelliteModal';
-import { BenchmarkModal } from './modals/BenchmarkModal';
-import { EarthExplorerModal } from './modals/EarthExplorerModal';
-import { EvidenceModal } from './modals/EvidenceModal';
-import { TraceModal } from './modals/TraceModal';
-import { DossierSearchModal } from './modals/DossierSearchModal';
+import { AOIImportModal } from './modals/AOIImportModal';
+import { SystemHubModal } from './modals/SystemHubModal';
 import { ObservationPicker } from './ObservationPicker';
 import { WorkspaceProvider, useWorkspace } from '../context/WorkspaceContext';
 
@@ -32,43 +27,62 @@ function MissionWorkspaceInner({
   onSwitchToReports,
 }: MissionWorkspaceProps) {
   const ws = useWorkspace();
+  const [isSystemHubOpen, setIsSystemHubOpen] = useState(false);
+  const [isAOIModalOpen, setIsAOIModalOpen] = useState(false);
 
-  const handleDiagnostics = () => {
-    if (onSwitchToDiagnostics) {
-      onSwitchToDiagnostics();
-    } else {
-      ws.setActiveTab('diagnostics');
-    }
-  };
+  // Global Keyboard Navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore when focused in text input
+      const target = document.activeElement as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+        if (e.key === 'Escape') {
+          target.blur();
+        }
+        return;
+      }
 
-  const handleReports = () => {
-    if (onSwitchToReports) {
-      onSwitchToReports();
-    } else {
-      ws.openExport('pdf');
-    }
-  };
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        const input = document.querySelector('input[type="text"]') as HTMLInputElement;
+        if (input) input.focus();
+      } else if (e.key.toLowerCase() === 'm') {
+        ws.setActiveTool(ws.activeTool === 'measure' ? 'select' : 'measure');
+      } else if (e.key.toLowerCase() === 'i') {
+        ws.setActiveTool(ws.activeTool === 'inspect' ? 'select' : 'inspect');
+      } else if (e.key.toLowerCase() === 'l') {
+        const btn = document.getElementById('compact-view-selector-btn');
+        if (btn) btn.click();
+      } else if (e.key.toLowerCase() === 'c') {
+        ws.setTemporalMode(ws.temporalMode === 'Swipe' ? 'Difference' : 'Swipe');
+      } else if (e.key.toLowerCase() === 'e') {
+        ws.toggleDrawer('evidence');
+      } else if (e.key === 'Escape') {
+        ws.closeDrawer();
+        setIsSystemHubOpen(false);
+        setIsAOIModalOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [ws]);
 
   return (
     <div className="w-full h-screen min-h-[700px] flex flex-col bg-[#0A0A0A] text-[#111111] font-sans antialiased overflow-hidden select-none">
-      {/* 1. Minimal Top Header */}
+      {/* 1. Ultra-Minimal Top Header (SATQUERY AI · Study · ● Ready · System) */}
       <TopHeader
-        activeTab={ws.activeTab}
-        onSelectTab={(tab) => {
-          if (tab === 'diagnostics') handleDiagnostics();
-          else if (tab === 'reports') handleReports();
-          else ws.setActiveTab('workspace');
-        }}
-        onOpenSettings={() => ws.setIsSettingsOpen(true)}
+        onOpenSystemHub={() => setIsSystemHubOpen(true)}
+        onOpenAOIModal={() => setIsAOIModalOpen(true)}
       />
 
-      {/* 2. Unified Hero Earth Observation Canvas (Dominates the Workspace) */}
+      {/* 2. Hero Earth Observation Map (Dominant Surface) */}
       <div className="flex-1 flex min-h-0 overflow-hidden relative">
         <main className="flex-1 relative flex flex-col min-w-0 bg-[#0A0A0A] overflow-hidden">
-          <GeoWorkspace />
+          <GeoWorkspace onOpenSystemHub={() => setIsSystemHubOpen(true)} />
         </main>
 
-        {/* Progressive Disclosure Slide-Over Drawers (Rendered over the canvas without layout shift) */}
+        {/* Contextual Slide-Over Drawers (Only displayed when invoked) */}
         <SceneDrawer
           isOpen={ws.activeDrawer === 'scene'}
           onClose={() => ws.closeDrawer()}
@@ -100,18 +114,25 @@ function MissionWorkspaceInner({
         />
       </div>
 
-      {/* 3. Bottom Persistent Command Surface & Execution Trace */}
-      <div className="shrink-0 bg-[#0C0C0C] border-t border-[#1E1E1E] px-6 py-2.5 space-y-2 z-20">
-        {/* Observable Agent Execution Progression */}
+      {/* 3. Bottom Centered Natural Language Query Bar */}
+      <div className="shrink-0 bg-[#0C0C0C] border-t border-white/10 px-6 py-2.5 space-y-2 z-20">
         {ws.isAnalyzing && (
           <AgentExecution currentStepIndex={ws.executionStepIndex} />
         )}
-
-        {/* Natural Language Query Composer */}
         <QueryBar />
       </div>
 
-      {/* 4. Production Modals */}
+      {/* 4. Essential Production Modals */}
+      <AOIImportModal
+        isOpen={isAOIModalOpen}
+        onClose={() => setIsAOIModalOpen(false)}
+      />
+
+      <SystemHubModal
+        isOpen={isSystemHubOpen}
+        onClose={() => setIsSystemHubOpen(false)}
+      />
+
       <ReportExportModal
         isOpen={ws.isExportOpen}
         onClose={ws.closeExport}
@@ -132,34 +153,6 @@ function MissionWorkspaceInner({
         }}
       />
 
-      <SettingsModal />
-
-      <LiveSatelliteModal
-        isOpen={ws.isLiveSatelliteOpen}
-        onClose={() => ws.setIsLiveSatelliteOpen(false)}
-      />
-
-      <BenchmarkModal
-        isOpen={ws.isBenchmarkOpen}
-        onClose={() => ws.setIsBenchmarkOpen(false)}
-      />
-
-      <EarthExplorerModal
-        isOpen={ws.isEarthExplorerOpen}
-        onClose={() => ws.setIsEarthExplorerOpen(false)}
-      />
-
-      <EvidenceModal />
-
-      <TraceModal />
-
-      <DossierSearchModal
-        isOpen={ws.isDossierSearchOpen}
-        onClose={() => ws.setIsDossierSearchOpen(false)}
-        onSelectDossier={ws.loadDossier}
-      />
-
-      {/* STAC Observation Picker */}
       <ObservationPicker />
     </div>
   );
@@ -175,4 +168,3 @@ export function MissionWorkspace(props: MissionWorkspaceProps) {
 
 export { SearchEarth } from './SearchEarth';
 export { ObservationPicker } from './ObservationPicker';
-
