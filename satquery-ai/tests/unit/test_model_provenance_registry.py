@@ -9,7 +9,7 @@ class TestModelProvenanceRegistry:
     def test_all_provenance_fields_present_in_registry(self):
         """Verify that every registered model provides the complete provenance taxonomy."""
         models = model_registry.list_models()
-        assert len(models) >= 4
+        assert len(models) >= 3
 
         required_keys = [
             "name",
@@ -51,7 +51,22 @@ class TestModelProvenanceRegistry:
 
     def test_water_body_analyzer_provenance(self):
         """Verify that WaterBodyAnalyzer is documented as a deterministic GIS specialist."""
-        water_meta = model_registry.get_provenance("water_body_analyzer")
-        assert water_meta is not None
-        assert "MNDWI" in water_meta.architecture
-        assert water_meta.runtime_status == "READY_CPU"
+        water_engine = model_registry.get_engine("water_body_analyzer")
+        assert water_engine is not None
+        assert water_engine.entity_type == "DETERMINISTIC_ENGINE"
+        assert "MNDWI" in water_engine.algorithm
+        assert water_engine.runtime_status == "READY_CPU"
+
+    def test_entity_taxonomy_separation(self):
+        """Verify strict taxonomy separation between MODEL and DETERMINISTIC_ENGINE."""
+        entities = model_registry.list_entities()
+        assert "models" in entities
+        assert "deterministic_engines" in entities
+        assert len(entities["models"]) >= 3
+        assert len(entities["deterministic_engines"]) >= 4
+
+        engine_keys = [e["key"] for e in entities["deterministic_engines"]]
+        assert "water_body_analyzer" in engine_keys
+        assert "sar_processor" in engine_keys
+        assert "geodesic_geometry" in engine_keys
+

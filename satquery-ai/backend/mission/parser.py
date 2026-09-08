@@ -68,7 +68,8 @@ class MissionSpec:
     required_modalities: List[str]
     constraints: MissionConstraints
     extracted_entities: Dict[str, Any] = field(default_factory=dict)
-    confidence: float = 0.90
+    routing_score: float = 1.0
+    routing_rationale: str = "Deterministic pattern match"
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -81,7 +82,8 @@ class MissionSpec:
             "required_modalities": self.required_modalities,
             "constraints": self.constraints.to_dict(),
             "extracted_entities": self.extracted_entities,
-            "confidence": round(self.confidence, 3),
+            "routing_score": round(self.routing_score, 3),
+            "routing_rationale": self.routing_rationale,
         }
 
 
@@ -234,5 +236,6 @@ class MissionParser:
             required_modalities=req_mods,
             constraints=constraints,
             extracted_entities={"phenomena": detected_phenomena},
-            confidence=0.92,
+            routing_score=1.0,
+            routing_rationale=f"Query parsed to intent '{intent.value}' targeting '{','.join(detected_phenomena)}'",
         )

@@ -2,8 +2,18 @@
 
 from __future__ import annotations
 
+from enum import Enum
 from typing import Protocol, List, Dict, Any, Optional, runtime_checkable
 from dataclasses import dataclass, field
+
+
+class EntityType(str, Enum):
+    """Rigorous classification of computational and data assets."""
+    MODEL = "MODEL"
+    DETERMINISTIC_ENGINE = "DETERMINISTIC_ENGINE"
+    DATASET = "DATASET"
+    EXPERIMENT = "EXPERIMENT"
+    ARTIFACT = "ARTIFACT"
 
 
 @runtime_checkable
@@ -34,7 +44,7 @@ class ModelAdapter(Protocol):
 
 @dataclass
 class ModelMetadata:
-    """Rigorous model provenance taxonomy for production remote sensing systems."""
+    """Rigorous model provenance taxonomy for statistical neural models."""
     name: str
     task: str
     architecture: str
@@ -42,6 +52,7 @@ class ModelMetadata:
     task_finetuned: bool
     training_dataset: str
     validation_dataset: str
+    entity_type: str = EntityType.MODEL.value
     checkpoint: Optional[str] = None
     checkpoint_sha256: Optional[str] = None
     training_commit: Optional[str] = None
@@ -54,6 +65,7 @@ class ModelMetadata:
 
     def to_dict(self) -> Dict[str, Any]:
         return {
+            "entity_type": self.entity_type,
             "name": self.name,
             "task": self.task,
             "architecture": self.architecture,
@@ -69,6 +81,37 @@ class ModelMetadata:
             "vram_estimate_mb": self.vram_estimate_mb,
             "description": self.description,
             "capabilities": self.capabilities,
+            "notes": self.notes,
+        }
+
+
+@dataclass
+class EngineMetadata:
+    """Rigorous provenance taxonomy for deterministic GIS and physical calculation engines."""
+    name: str
+    task: str
+    algorithm: str
+    mathematical_basis: str
+    entity_type: str = EntityType.DETERMINISTIC_ENGINE.value
+    runtime_status: str = "READY_CPU"
+    capabilities: List[str] = field(default_factory=list)
+    description: str = ""
+    verification_standard: str = "Survey of India / Physical Spectral Theory"
+    uncertainty_formulation: Optional[str] = None
+    notes: str = ""
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "entity_type": self.entity_type,
+            "name": self.name,
+            "task": self.task,
+            "algorithm": self.algorithm,
+            "mathematical_basis": self.mathematical_basis,
+            "runtime_status": self.runtime_status,
+            "capabilities": self.capabilities,
+            "description": self.description,
+            "verification_standard": self.verification_standard,
+            "uncertainty_formulation": self.uncertainty_formulation,
             "notes": self.notes,
         }
 
@@ -117,15 +160,17 @@ class StubModelAdapter:
 
 
 class ModelRegistry:
-    """Central registry tracking AI model adapters, provenance metadata, and runtime health."""
+    """Central registry tracking AI models, deterministic engines, and runtime health."""
 
     def __init__(self):
         self._models: Dict[str, ModelAdapter] = {}
         self._provenance: Dict[str, ModelMetadata] = {}
-        self._register_default_models()
+        self._engines: Dict[str, EngineMetadata] = {}
+        self._register_default_entities()
 
-    def _register_default_models(self) -> None:
-        # 1. GeoChat-7B (VLM)
+    def _register_default_entities(self) -> None:
+        # === 1. NEURAL MODELS ===
+        # GeoChat-7B (VLM)
         self.register(
             "geochat",
             StubModelAdapter(
@@ -144,7 +189,7 @@ class ModelRegistry:
                 task="vqa_and_grounding",
                 architecture="LLaVA-1.5 RS Fine-tuned (Vicuna-7B + CLIP-ViT-L/14)",
                 pretrained_source="MBZUAI/geochat-7b",
-                task_finetuned=False,  # Loaded zero-shot/pretrained, not trained from scratch by SatQuery
+                task_finetuned=False,
                 training_dataset="RSVQA / LR & HR Instruct Multimodal Alignment",
                 validation_dataset="RSVQA-HR Test Split / VRSBench Grounding",
                 checkpoint="checkpoints/geochat",
@@ -158,7 +203,7 @@ class ModelRegistry:
             ),
         )
 
-        # 2. ChangeNet (Bi-Temporal Change Detection)
+        # ChangeNet (Bi-Temporal Change Detection)
         self.register_provenance(
             "changenet",
             ModelMetadata(
@@ -166,11 +211,11 @@ class ModelRegistry:
                 task="bitemporal_change_detection",
                 architecture="Siamese ResNet18 + Feature Pyramid Difference Head",
                 pretrained_source="Torchvision ResNet-18",
-                task_finetuned=False,  # Unverified on real LEVIR-CD; prototype only
+                task_finetuned=False,
                 training_dataset="synthetic_prototype",
                 validation_dataset="synthetic_val",
                 checkpoint="checkpoints/changenet_best.pt",
-                checkpoint_sha256=None,  # No real weights verified on disk
+                checkpoint_sha256=None,
                 training_commit="prototype-synthetic-v1",
                 evaluation_metrics={"status": "unverified_checkpoint"},
                 runtime_status="CLASSICAL_FALLBACK",
@@ -180,7 +225,7 @@ class ModelRegistry:
             ),
         )
 
-        # 3. DOFA (Multimodal Foundation Optical + SAR)
+        # DOFA (Multimodal Foundation Optical + SAR)
         self.register(
             "dofa",
             StubModelAdapter(
@@ -213,25 +258,79 @@ class ModelRegistry:
             ),
         )
 
-        # 4. WaterBodyAnalyzer (Deterministic GIS Specialist)
-        self.register_provenance(
+        # === 2. DETERMINISTIC GIS ENGINES (NOT NEURAL MODELS) ===
+        self.register_engine(
             "water_body_analyzer",
-            ModelMetadata(
+            EngineMetadata(
                 name="WaterBodyAnalyzer",
                 task="spatial_ranking_and_water_segmentation",
-                architecture="MNDWI/NDWI Spectral Math + Morphological Filters + WGS84 Geodesic Contours",
-                pretrained_source="Deterministic Remote Sensing Physics",
-                task_finetuned=True,
-                training_dataset="Sentinel-2 Multispectral Water Reference Masks",
-                validation_dataset="ISRO/SAC Regional Water Bodies Benchmark",
-                checkpoint=None,
-                checkpoint_sha256=None,
-                training_commit="git-satquery-water-v1",
-                evaluation_metrics={"precision": 0.962, "recall": 0.941, "kappa": 0.950},
-                runtime_status="READY_CPU",
-                vram_estimate_mb=200,
-                description="Deterministic spectral water segmentation, connected component labeling, and WGS84 geodesic area ranking",
-                capabilities=["water_detection", "geodesic_area_ha", "spatial_ranking", "contour_polygonization"],
+                algorithm="MNDWI Spectral Math + Otsu Adaptive Threshold + Morphological Opening + Connected Components + WGS84 Geodesic Contours",
+                mathematical_basis="MNDWI = (Green - SWIR1) / (Green + SWIR1); pyproj.Geod(ellps='WGS84')",
+                capabilities=["water_detection", "geodesic_area_ha", "spatial_ranking", "contour_polygonization", "mixed_pixel_uncertainty"],
+                description="Deterministic spectral water segmentation and geodesic ellipsoidal area ranking with statistical ambiguity qualification",
+                uncertainty_formulation="sigma_area = Perimeter * GSD * 0.5",
+            ),
+        )
+
+        self.register_engine(
+            "built_up_analyzer",
+            EngineMetadata(
+                name="BuiltUpAnalyzer",
+                task="built_up_segmentation_and_ranking",
+                algorithm="NDBI/BSI Spectral Math + Otsu Adaptive Threshold + Morphological Closing + Connected Components + WGS84 Geodesic Contours",
+                mathematical_basis="NDBI = (SWIR1 - NIR) / (SWIR1 + NIR); pyproj.Geod(ellps='WGS84')",
+                capabilities=["built_up_detection", "geodesic_area_ha", "urban_ranking", "contour_polygonization"],
+                description="Deterministic spectral built-up extraction and spatial ranking",
+                uncertainty_formulation="sigma_area = Perimeter * GSD * 0.5",
+            ),
+        )
+
+        self.register_engine(
+            "vegetation_analyzer",
+            EngineMetadata(
+                name="VegetationAnalyzer",
+                task="vegetation_canopy_segmentation_and_ranking",
+                algorithm="NDVI/SAVI Spectral Math + Otsu Adaptive Threshold + Morphological Filtering + Connected Components + WGS84 Geodesic Contours",
+                mathematical_basis="NDVI = (NIR - Red) / (NIR + Red); SAVI = ((NIR - Red) / (NIR + Red + L)) * (1 + L)",
+                capabilities=["vegetation_detection", "canopy_area_ha", "forest_ranking", "contour_polygonization"],
+                description="Deterministic spectral canopy extraction and spatial ranking",
+                uncertainty_formulation="sigma_area = Perimeter * GSD * 0.5",
+            ),
+        )
+
+        self.register_engine(
+            "sar_processor",
+            EngineMetadata(
+                name="SARRadiometricProcessor",
+                task="sar_calibration_and_water_corroboration",
+                algorithm="Radiometric Calibration to sigma0 (dB) + Lee 5x5 Speckle Filter + Radar Water Thresholding",
+                mathematical_basis="sigma0_dB = 10 * log10(DN^2 / A^2); Lee local statistics filter",
+                capabilities=["sar_calibration", "lee_filter", "radar_water_threshold", "cross_modal_corroboration"],
+                description="Deterministic Sentinel-1 SAR calibration and physical spatial corroboration",
+            ),
+        )
+
+        self.register_engine(
+            "akaze_coregistration",
+            EngineMetadata(
+                name="AKAZECoRegistration",
+                task="bitemporal_image_alignment",
+                algorithm="AKAZE Nonlinear Scale Space Feature Detection + RANSAC Affine/Homography Homologous Matching",
+                mathematical_basis="Nonlinear diffusion filtering + RANSAC residual error RMSE < 0.5 px",
+                capabilities=["subpixel_alignment", "homography_estimation", "rmse_qualification"],
+                description="Deterministic feature-based geometric coregistration for multi-temporal optical imagery",
+            ),
+        )
+
+        self.register_engine(
+            "geodesic_geometry",
+            EngineMetadata(
+                name="GeodesicGeometryEngine",
+                task="ellipsoidal_spatial_measurement",
+                algorithm="Karney Geodesic Inverse Problem on WGS84 Ellipsoid (PyProj / Shapely 2.0)",
+                mathematical_basis="WGS84 Reference Ellipsoid (a=6378137.0m, f=1/298.257223563)",
+                capabilities=["geodesic_area_m2", "geodesic_area_ha", "geodesic_perimeter_m", "two_point_distance_m"],
+                description="Deterministic geodetic surface measurement compliant with Survey of India standards",
             ),
         )
 
@@ -241,11 +340,31 @@ class ModelRegistry:
     def register_provenance(self, key: str, meta: ModelMetadata) -> None:
         self._provenance[key] = meta
 
+    def register_engine(self, key: str, engine: EngineMetadata) -> None:
+        self._engines[key] = engine
+
     def get(self, key: str) -> Optional[ModelAdapter]:
         return self._models.get(key)
 
     def get_provenance(self, key: str) -> Optional[ModelMetadata]:
         return self._provenance.get(key)
+
+    def get_engine(self, key: str) -> Optional[EngineMetadata]:
+        return self._engines.get(key)
+
+    def list_engines(self) -> List[Dict[str, Any]]:
+        result = []
+        for key, engine in sorted(self._engines.items()):
+            d = engine.to_dict()
+            d["key"] = key
+            result.append(d)
+        return result
+
+    def list_entities(self) -> Dict[str, Any]:
+        return {
+            "models": self.list_models(),
+            "deterministic_engines": self.list_engines(),
+        }
 
     def list_models(self) -> List[Dict[str, Any]]:
         result = []
@@ -261,7 +380,8 @@ class ModelRegistry:
                     d["runtime_status"] = adapter.status
                 result.append(d)
             elif adapter:
-                result.append({
+                d = {
+                    "entity_type": EntityType.MODEL.value,
                     "key": key,
                     "name": getattr(adapter, "name", key),
                     "task": getattr(adapter, "task", "unknown"),
@@ -278,8 +398,10 @@ class ModelRegistry:
                     "vram_estimate_mb": getattr(adapter, "vram_estimate_mb", 0),
                     "description": getattr(adapter, "description", ""),
                     "capabilities": getattr(adapter, "capabilities", []),
-                })
+                }
+                result.append(d)
         return result
 
 
 model_registry = ModelRegistry()
+

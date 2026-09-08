@@ -151,7 +151,7 @@ class AgentOrchestrator:
         return {
             "query": query,
             "intent": spec.intent.value,
-            "intent_confidence": spec.confidence,
+            "routing_score": spec.routing_score,
             "job_id": job_id,
             "mission_id": spec.mission_id,
             "answer": final_answer,

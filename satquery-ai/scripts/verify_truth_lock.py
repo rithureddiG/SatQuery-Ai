@@ -27,7 +27,7 @@ import pytest
 
 def run_truth_lock_verification():
     print("==========================================================================")
-    print("        SATQUERY AI — MASTER TRUTH LOCK v1 VERIFICATION HARNESS           ")
+    print("        SATQUERY AI — MASTER TRUTH LOCK v2 VERIFICATION HARNESS           ")
     print("==========================================================================")
     t_start = time.perf_counter()
 
@@ -37,6 +37,9 @@ def run_truth_lock_verification():
         "tests/integration/test_behavioral_matrix_water.py",
         "tests/unit/test_geochat_multimodal_tensor_verification.py",
         "tests/unit/test_model_provenance_registry.py",
+        "tests/unit/test_query_planner_scoring.py",
+        "tests/unit/test_general_spatial_ranking.py",
+        "tests/benchmarks/test_blind_validation.py",
         "tests/integration/test_golden_mission_artifact_chain.py",
         "tests/integration/test_report_format_integrity.py",
         "tests/integration/test_analysis_replay_bitwise.py",
@@ -89,7 +92,7 @@ def run_truth_lock_verification():
     overall_status = "PASSED" if all_passed else "FAILED"
 
     report = {
-        "suite": "SATQUERY_TRUTH_LOCK_v1",
+        "suite": "SATQUERY_TRUTH_LOCK_v2",
         "status": overall_status,
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "total_duration_sec": total_duration,

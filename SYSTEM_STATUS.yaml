@@ -1,246 +1,66 @@
 # SatQuery AI — Authoritative System Status & SIH26167 Compliance Matrix
-# Updated: 2026-09-06
-#
-# Taxonomy:
-#   IMPLEMENTED: Code architecture exists and is runnable
-#   INTEGRATED:  The main application / orchestrator invokes it
-#   VALIDATED:   Automated unit or integration tests pass
-#   BENCHMARKED: Evaluated on official public or ISRO-format benchmark datasets
-#   PRODUCTION:  Hardened with input sanitization, error traps, and telemetry
+# Generated programmatically by scripts/generate_system_status.py
+# Updated: 2026-09-08T23:00:00Z
 
 system:
   name: "SatQuery AI"
-  version: "0.9.0-alpha"
+  version: "0.9.5-alpha"
   sih_problem_id: "SIH26167"
   organization: "ISRO / SAC Compliant Architecture"
   primary_hardware_target: "NVIDIA RTX 4060 (8 GB VRAM) / CUDA 12.x"
   authoritative_backend: "satquery-ai/backend"
   authoritative_frontend: "satquery-ai/apps/web"
 
-capabilities:
+models:
+  geochat_7b:
+    status: "NOT_INSTALLED"
+    truth_state: "CLASSICAL_FALLBACK"
+    checkpoint_verified: false
+    description: "VLM weights offline on host; classical spectral fallback active with zero hallucinated boxes"
 
-  # 1. Ingestion & Security
-  asset_ingestion:
-    implemented: true
-    integrated: true
-    validated: true
-    benchmarked: true
-    production_ready: true
-    description: "Multi-band GeoTIFF, JP2, PNG, JPEG ingestion with SHA-256 and metadata extraction"
+  changenet_v1:
+    status: "CLASSICAL_FALLBACK"
+    truth_state: "UNTRAINED_MODEL"
+    checkpoint_verified: false
+    training_status: "PROTOTYPE_ONLY"
+    description: "Siamese ResNet-18 architecture runnable; spectral index differential fallback active"
 
-  input_sanitization_and_security:
-    implemented: true
-    integrated: true
-    validated: true
-    benchmarked: true
-    production_ready: true
-    description: "Defense against path traversal, decompression bombs, 2GB limits, and IEEE 754 NaN/Inf traps"
+  dofa_foundation:
+    status: "CLASSICAL_FALLBACK"
+    truth_state: "LEVEL_2_PHYSICAL_SPATIAL_CORROBORATION"
+    corroboration_level: "LEVEL_2_PHYSICAL_SPATIAL_CORROBORATION"
+    description: "Physical spatial intersection of optical and SAR backscatter masks (not learned neural fusion)"
 
-  # 2. Geospatial & Spectral
-  spectral_index_calculation:
-    implemented: true
-    integrated: true
-    validated: true
-    benchmarked: true
-    production_ready: true
-    description: "Deterministic NDVI, NDWI, MNDWI, NDBI, NDMI, SAVI, BSI band math"
-
-  sar_calibration_and_speckle_filtering:
-    implemented: true
-    integrated: true
-    validated: true
-    benchmarked: true
-    production_ready: true
-    description: "Radiometric calibration to σ⁰ (dB), Lee speckle filter, VV/VH ratio, radar water thresholding"
-
+deterministic_engines:
+  water_body_analyzer:
+    type: "DETERMINISTIC_ENGINE"
+    status: "VALIDATED"
+    algorithm: "MNDWI + Otsu + Morphological Contours + WGS84 Geodesic"
+  built_up_analyzer:
+    type: "DETERMINISTIC_ENGINE"
+    status: "VALIDATED"
+    algorithm: "NDBI + Adaptive Threshold + Geodesic Contours"
+  vegetation_analyzer:
+    type: "DETERMINISTIC_ENGINE"
+    status: "VALIDATED"
+    algorithm: "NDVI + Canopy Segmentation + Geodesic Contours"
+  sar_processor:
+    type: "DETERMINISTIC_ENGINE"
+    status: "VALIDATED"
+    algorithm: "Radiometric sigma0 dB Calibration + Lee 5x5 Filter"
   akaze_coregistration:
-    implemented: true
-    integrated: true
-    validated: true
-    benchmarked: true
-    production_ready: true
-    description: "ORB/AKAZE auto-fallback with sub-pixel corner refinement, homography/affine RANSAC, and ground RMSE"
-
-  # 3. Model Inference & Perception
-  single_image_vqa:
-    implemented: true
-    integrated: true
-    validated: true
-    benchmarked: false
-    production_ready: false
-    model: "GeoChat-7B (4-bit NF4)"
-    checkpoint_status: "WEIGHTS_PENDING_DOWNLOAD"
-    fallback_active: "Deterministic Offline Rule Engine"
-    description: "RS Visual Question Answering with 4-bit BitsAndBytes quantization path"
-
-  visual_grounding_and_localization:
-    implemented: true
-    integrated: true
-    validated: true
-    benchmarked: false
-    production_ready: false
-    model: "GeoChat-7B + SAM Refinement"
-    checkpoint_status: "WEIGHTS_PENDING_DOWNLOAD"
-    fallback_active: "GrabCut / Otsu Morphological Box Refinement"
-    description: "Bounding box extraction parsed into GeoJSON polygons with ground area calculation"
-
-  bitemporal_change_detection:
-    implemented: true
-    integrated: true
-    validated: true
-    benchmarked: false
-    production_ready: false
-    model: "Siamese ChangeNet (ResNet18-FPN)"
-    checkpoint_status: "READY_UNTRAINED_FALLBACK"
-    training_pipeline: "satquery-ai/backend/models/change/train_levir.py"
-    target_dataset: "LEVIR-CD"
-    description: "Bi-temporal change detection with connected components and area computation"
-
-  semantic_change_classification:
-    implemented: true
-    integrated: true
-    validated: true
-    benchmarked: true
-    production_ready: true
-    description: "Categorization into new_urban_builtup, vegetation_clearing, water_expansion via ΔNDVI/ΔNDBI"
-
-  spatial_ranking_and_water_body_analysis:
-    implemented: true
-    integrated: true
-    validated: true
-    benchmarked: true
-    production_ready: true
-    description: "Deterministic spectral segmentation (MNDWI/NDWI), connected components, and geodesic argmax(area) calculation for superlatives (largest/smallest) yielding genuine vector contours"
-
-  training_and_evaluation_layer:
-    implemented: true
-    integrated: true
-    validated: true
-    benchmarked: true
-    production_ready: true
-    description: "Dataset loaders (RSVQA, VRSBench, LEVIR-CD, BigEarthNet-MM), preprocessing, trainers (ChangeNet, Grounding Adapter, Fusion Head), and evaluation benchmarks with SHA-256 provenance tracking"
-
-  # 4. Multi-Modal Corroboration vs Fusion
-  optical_sar_spatial_corroboration:
-    implemented: true
-    integrated: true
-    validated: true
-    benchmarked: false
-    production_ready: true
-    level: "Level 2 (Spatial Corroboration: Optical ∩ SAR)"
-    description: "Pixel-level intersection of optical NDWI and SAR low-backscatter masks with IoU and Kappa"
-
-  optical_sar_joint_fusion:
-    implemented: true
-    integrated: true
-    validated: false
-    benchmarked: false
-    production_ready: false
-    level: "Level 3 (True Multimodal Learned Fusion)"
-    description: "Cross-attention joint feature representation (in development)"
-
-  sensor_disagreement_diagnosis:
-    implemented: true
-    integrated: true
-    validated: true
-    benchmarked: true
-    production_ready: true
-    description: "Physics-informed diagnosis of optical vs SAR discordance (clouds, wind waves, specular reflection)"
-
-  temporal_trajectory_analysis:
-    implemented: true
-    integrated: true
-    validated: true
-    benchmarked: true
-    production_ready: true
-    description: "Multi-date time series trajectory modeling (accelerating, steady, episodic pulse)"
-
-  # 5. Remote Sensing Domain Adaptation
-  remote_sensing_adaptation:
-    implemented: true
-    integrated: false
-    validated: false
-    benchmarked: false
-    production_ready: false
-    target_dataset: "BigEarthNet-S2 (19 CORINE classes)"
-    script: "satquery-ai/backend/models/adaptation/train_bigearthnet_lora.py"
-    status: "ADAPTATION_RUN_NOT_COMPLETED"
-    description: "Parameter-efficient LoRA/linear adaptation of visual encoder using BigEarthNet"
-
-  # 6. Agent, Evidence & Verification
-  mission_dag_orchestration:
-    implemented: true
-    integrated: true
-    validated: true
-    benchmarked: true
-    production_ready: true
-    description: "Natural language query parsed to MissionSpec, compiled to DAG, executed with node telemetry"
-
-  hardware_aware_gpu_scheduler:
-    implemented: true
-    integrated: true
-    validated: true
-    benchmarked: true
-    production_ready: true
-    budget_mb: 7500
-    description: "Sequential VRAM budget manager with LRU model eviction and explicit CUDA cache clearing"
-
-  evidence_graph_and_epistemological_gate:
-    implemented: true
-    integrated: true
-    validated: true
-    benchmarked: true
-    production_ready: true
-    stances: ["ANSWER", "QUALIFY", "ABSTAIN"]
-    description: "Directed acyclic evidence graph connecting claims to pixels; abstains on high cloud or misregistration"
-
-  audit_dossier_reporting:
-    implemented: true
-    integrated: true
-    validated: true
-    benchmarked: true
-    production_ready: true
-    formats: ["PDF", "GeoJSON", "CSV"]
-    description: "Standardized downloadable mission dossiers with DAG timeline, confidence attribution, and caveats"
-
-benchmarks:
-  rsvqa_hr:
-    status: "EVALUATION_PENDING"
-    dataset: "RSVQA-HR"
-    split: "test"
-    target_metric: "Top-1 Accuracy"
-    verified_result: null
-
-  vrsbench_grounding:
-    status: "EVALUATION_PENDING"
-    dataset: "VRSBench"
-    split: "test"
-    target_metric: "mAP@0.50"
-    verified_result: null
-
-  cdvqa:
-    status: "EVALUATION_PENDING"
-    dataset: "CDVQA"
-    split: "test"
-    target_metric: "Top-1 Accuracy"
-    verified_result: null
-
-  bigearthnet_classification:
-    status: "ADAPTATION_RUN_NOT_COMPLETED"
-    dataset: "BigEarthNet-S2"
-    split: "test"
-    target_metric: "Macro F1"
-    verified_result: null
+    type: "DETERMINISTIC_ENGINE"
+    status: "VALIDATED"
+    algorithm: "AKAZE Nonlinear Diffusion + RANSAC Homography"
+  geodesic_geometry:
+    type: "DETERMINISTIC_ENGINE"
+    status: "VALIDATED"
+    algorithm: "PyProj Karney Geodesic on WGS84 Ellipsoid"
 
 truth_lock:
-  version: "v1.0"
+  version: "v2.0"
   status: "LOCKED"
-  verification_suite: "satquery-ai/scripts/verify_truth_lock.py"
-  invariants_enforced:
-    source_image_id_lock: true
-    zero_synthetic_confidence: true
-    zero_hardcoded_boxes: true
-    zero_unverified_levir_claims: true
-    cross_format_report_parity: true
-    bitwise_replay_auditing: true
-    honest_water_abstention: true
+  zero_synthetic_confidence: true
+  zero_hardcoded_boxes: true
+  zero_unverified_model_claims: true
+  canonical_generator: "satquery-ai/scripts/generate_system_status.py"

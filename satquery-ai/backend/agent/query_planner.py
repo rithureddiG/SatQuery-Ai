@@ -25,7 +25,9 @@ class QueryPlan:
     sensors: List[str] = field(default_factory=lambda: ["optical"])
     preferred_tools: List[str] = field(default_factory=list)
     fallback_policy: str = "abstain_if_unsupported"
-    confidence: float = 0.95
+    routing_score: float = 1.0
+    routing_reason: str = "Deterministic pattern match"
+    matched_patterns: List[str] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -38,7 +40,9 @@ class QueryPlan:
             "sensors": self.sensors,
             "preferred_tools": self.preferred_tools,
             "fallback_policy": self.fallback_policy,
-            "confidence": self.confidence,
+            "routing_score": self.routing_score,
+            "routing_reason": self.routing_reason,
+            "matched_patterns": self.matched_patterns,
         }
 
 
@@ -95,9 +99,12 @@ class QueryCapabilityPlanner:
 
         # 1. Identify target physical phenomenon
         target = "general_landcover"
+        matched_targets = []
         for phenom, patterns in self.TARGET_PATTERNS.items():
-            if any(re.search(p, q_lower) for p in patterns):
+            matches = [p for p in patterns if re.search(p, q_lower)]
+            if matches:
                 target = phenom
+                matched_targets.extend(matches)
                 break
 
         # 2. Check for ranking superlatives (largest, smallest, etc.)
@@ -121,7 +128,9 @@ class QueryCapabilityPlanner:
                 sensors=["optical"],
                 preferred_tools=preferred,
                 fallback_policy="abstain_if_unsupported",
-                confidence=0.96,
+                routing_score=1.0,
+                routing_reason=f"Superlative '{op}' and target '{target}' matched deterministic spatial ranking pipeline",
+                matched_patterns=matched_targets,
             )
 
         # 4. Bi-Temporal Change & Compound Investigation
@@ -137,7 +146,9 @@ class QueryCapabilityPlanner:
                 sensors=sensors,
                 preferred_tools=["ChangeNetModelAdapter", "SpectralIndexCalculator", "SpatialFusionEngine"],
                 fallback_policy="classical_fallback",
-                confidence=0.92,
+                routing_score=1.0,
+                routing_reason="Change pattern matched and multiple temporal observations available",
+                matched_patterns=["change_keywords" if has_change else "multi_asset_context"],
             )
 
         # 5. Multimodal Optical + SAR Corroboration
@@ -152,7 +163,9 @@ class QueryCapabilityPlanner:
                 sensors=["optical", "sar"],
                 preferred_tools=["SARProcessor", "SpatialFusionEngine"],
                 fallback_policy="classical_fallback",
-                confidence=0.90,
+                routing_score=1.0,
+                routing_reason="Radar/SAR sensor keywords or context triggered Level 2 physical spatial corroboration",
+                matched_patterns=["sar_keywords"],
             )
 
         # 6. Generic Visual Grounding
@@ -167,7 +180,9 @@ class QueryCapabilityPlanner:
                 sensors=["optical"],
                 preferred_tools=["GeoChatModelAdapter", "SAMModelAdapter"],
                 fallback_policy="abstain_if_unsupported",
-                confidence=0.88,
+                routing_score=1.0,
+                routing_reason="Referring expression or location pattern matched",
+                matched_patterns=["grounding_keywords"],
             )
 
         # 7. Default Single-Image Semantic VQA
@@ -181,7 +196,9 @@ class QueryCapabilityPlanner:
             sensors=["optical"],
             preferred_tools=["GeoChatModelAdapter"],
             fallback_policy="classical_fallback",
-            confidence=0.85,
+            routing_score=1.0,
+            routing_reason="Default single-image visual question answering fallback",
+            matched_patterns=[],
         )
 
 
