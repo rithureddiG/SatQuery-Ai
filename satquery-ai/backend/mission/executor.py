@@ -249,9 +249,9 @@ class MissionExecutor:
                     )
                     context["fusion_result"] = fusion_res
                     evidence_artifacts["cross_modal_fusion"] = fusion_res
-                    corrob = fusion_res.get("corroboration_score", 0.91)
+                    corrob = fusion_res.get("corroboration_score", 0.0)
                     confidence_breakdown["sensor_agreement"] = corrob
-                    out_summary = {"corroboration_score": corrob}
+                    out_summary = {"corroboration_score": corrob, "decision": fusion_res.get("decision", "ANSWER")}
 
                 # 7. DISAGREEMENT_ANALYSIS
                 elif node.node_type == NodeType.DISAGREEMENT_ANALYSIS:
@@ -264,18 +264,30 @@ class MissionExecutor:
                     if "cross_modal_fusion" in evidence_artifacts and "change" in evidence_artifacts:
                         ch = evidence_artifacts["change"]
                         fu = evidence_artifacts["cross_modal_fusion"]
-                        synthesized_answer = (
-                            f"Multi-temporal ChangeNet analysis detected {ch.get('change_percent', 0.0)}% surface alteration "
-                            f"across {ch.get('total_area_m2', 0.0):,.1f} m² ({ch.get('total_area_ha', 0.0)} ha) divided into {ch.get('cluster_count', 0)} zone(s). "
-                            f"Cross-modal Sentinel-1 SAR backscatter corroborates optical findings with a multi-sensor agreement score of {fu.get('corroboration_score', 0.91) * 100:.1f}%."
-                        )
+                        if fu.get("decision") == "ABSTAIN":
+                            synthesized_answer = (
+                                f"Multi-temporal ChangeNet analysis detected {ch.get('change_percent', 0.0)}% surface alteration "
+                                f"across {ch.get('total_area_m2', 0.0):,.1f} m² ({ch.get('total_area_ha', 0.0)} ha) divided into {ch.get('cluster_count', 0)} zone(s). "
+                                f"Note: Cross-modal SAR corroboration was abstained: {fu.get('joint_claim', 'Insufficient spatial overlap')}."
+                            )
+                        else:
+                            corrob_val = fu.get("corroboration_score", 0.0)
+                            synthesized_answer = (
+                                f"Multi-temporal ChangeNet analysis detected {ch.get('change_percent', 0.0)}% surface alteration "
+                                f"across {ch.get('total_area_m2', 0.0):,.1f} m² ({ch.get('total_area_ha', 0.0)} ha) divided into {ch.get('cluster_count', 0)} zone(s). "
+                                f"Cross-modal Sentinel-1 SAR backscatter corroborates optical findings with a multi-sensor agreement score of {corrob_val * 100:.1f}%."
+                            )
                     elif "cross_modal_fusion" in evidence_artifacts:
                         fu = evidence_artifacts["cross_modal_fusion"]
-                        synthesized_answer = (
-                            f"Spatial cross-modal fusion between optical multispectral imagery and Sentinel-1 SAR confirms "
-                            f"target features with a corroboration consensus score of {fu.get('corroboration_score', 0.91) * 100:.1f}%. "
-                            f"Radar backscatter penetrates cloud and atmospheric occlusion to verify physical ground geometry."
-                        )
+                        if fu.get("decision") == "ABSTAIN":
+                            synthesized_answer = f"Cross-modal analysis abstained: {fu.get('joint_claim', 'Insufficient spatial overlap between sensors')}."
+                        else:
+                            corrob_val = fu.get("corroboration_score", 0.0)
+                            synthesized_answer = (
+                                f"Spatial cross-modal fusion between optical multispectral imagery and Sentinel-1 SAR confirms "
+                                f"target features with a corroboration consensus score of {corrob_val * 100:.1f}%. "
+                                f"Radar backscatter penetrates cloud and atmospheric occlusion to verify physical ground geometry."
+                            )
                     out_summary = {"evidence_nodes": len(evidence_artifacts)}
 
             except Exception as e:

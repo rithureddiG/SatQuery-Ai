@@ -65,6 +65,7 @@ class WaterBodyCandidate:
     index_method: str  # "MNDWI" or "NDWI"
     threshold: float
     valid_pixel_fraction: float
+    spectral_mean: float = 0.0
     area_uncertainty_m2: float = 0.0
     area_uncertainty_ha: float = 0.0
 
@@ -83,6 +84,7 @@ class WaterBodyCandidate:
             "index_method": self.index_method,
             "threshold": round(self.threshold, 3),
             "valid_pixel_fraction": round(self.valid_pixel_fraction, 3),
+            "spectral_mean": round(self.spectral_mean, 4),
         }
 
 
@@ -361,6 +363,7 @@ class WaterBodyAnalyzer:
                 # Mixed-pixel boundary uncertainty: approx 0.5 pixel width along perimeter
                 uncertainty_m2 = perim_m * res_x * 0.5
                 uncertainty_ha = uncertainty_m2 / 10000.0
+                cand_spectral_mean = float(np.mean(water_index[comp_mask > 0])) if np.any(comp_mask > 0) else float(thresh)
 
                 candidates.append(
                     WaterBodyCandidate(
@@ -377,6 +380,7 @@ class WaterBodyAnalyzer:
                         index_method=index_method,
                         threshold=thresh,
                         valid_pixel_fraction=valid_pixel_ratio,
+                        spectral_mean=cand_spectral_mean,
                     )
                 )
 

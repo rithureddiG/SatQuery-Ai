@@ -1,52 +1,37 @@
-#!/bin/bash
-# SatQuery AI - Truth Lock v2 Push Script
+#!/usr/bin/env bash
+# SatQuery AI - Truth Lock v3 Push Script
 set -e
 
-echo "=== SatQuery AI: Staging and Pushing SATQUERY TRUTH LOCK v2 ==="
+echo "=== SatQuery AI: Staging and Pushing SATQUERY TRUTH LOCK v3 ==="
 
-# Stage backend entity taxonomy, scoring decoupling, and generalized query engine
-git add satquery-ai/backend/models/registry.py
-git add satquery-ai/backend/agent/query_planner.py
-git add satquery-ai/backend/mission/parser.py
-git add satquery-ai/backend/agent/orchestrator.py
+# 1. Frontend synthetic scientific generator purge
+git add satquery-ai/apps/web/src/lib/geospatial.ts
+
+# 2. Optical-SAR authentic spatial overlap & honest abstention
+git add satquery-ai/backend/pipelines/optical_sar.py
+git add satquery-ai/backend/mission/executor.py
+
+# 3. Geospatial measured reliability & zero-fabrication factors
+git add satquery-ai/backend/geospatial/water_body.py
 git add satquery-ai/backend/geospatial/target_analyzers.py
 git add satquery-ai/backend/engines/spatial_ranking.py
-git add satquery-ai/training/trainers/changenet.py
 
-# Stage runtime verification and canonical status generator scripts
-git add satquery-ai/scripts/verify_geochat_runtime.py
+# 4. Status generator & multi-tier SIH matrix
 git add satquery-ai/scripts/generate_system_status.py
-git add satquery-ai/scripts/verify_truth_lock.py
-
-# Stage test suites
-git add satquery-ai/tests/unit/test_query_planner_scoring.py
-git add satquery-ai/tests/unit/test_general_spatial_ranking.py
-git add satquery-ai/tests/unit/test_model_provenance_registry.py
-git add satquery-ai/tests/benchmarks/test_blind_validation.py
-
-# Stage manifest, status, reports, and documentation
-git add satquery-ai/models_manifest.json
-git add models_manifest.json
-git add satquery-ai/SYSTEM_STATUS.yaml
-git add SYSTEM_STATUS.yaml
 git add satquery-ai/docs/SIH_REQUIREMENT_MATRIX.md
 git add docs/SIH_REQUIREMENT_MATRIX.md
-git add satquery-ai/truth_lock_report.json
-git add truth_lock_report.json
-git add satquery-ai/blind_validation_report.json
-git add blind_validation_report.json
 
-# Stage push scripts
-git add push_truth_lock.ps1
-git add push_truth_lock.sh
+# 5. Unit tests
+git add satquery-ai/tests/unit/test_truth_lock_v3_provenance.py
 
-# Commit
-git commit -m "feat(truth-lock-v2): real model verification, blind data validation, general query engine, scoring decoupling, and canonical status generation" || true
+# 6. Commit
+git commit -m "feat(truth-lock-v3): purge synthetic frontend generators, authentic optical-sar overlap, honest abstention, measured reliability factors, and multi-tier SIH matrix" || true
 
+# Stage any remaining files
 git add -A
 git status
 
 echo "=== Pushing to GitHub Remote ==="
 git push origin main || git push origin master
 
-echo "=== Truth Lock v2 Pushed Successfully! ==="
+echo "=== Truth Lock v3 Pushed Successfully! ==="

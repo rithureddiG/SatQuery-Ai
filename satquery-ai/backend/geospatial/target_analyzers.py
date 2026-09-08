@@ -80,6 +80,13 @@ class TargetAnalysisResult:
     index_name: str
     threshold_used: float
     is_empty: bool = False
+    valid_pixel_coverage: float = 1.0
+    cloud_freedom: float = 1.0
+    resolution_suitability: float = 1.0
+    spectral_distinctiveness: float = 0.5
+    geometry_validity: float = 1.0
+    reliability_score: float = 0.5
+    reliability_factors: Dict[str, float] = field(default_factory=dict)
 
 
 class BaseTargetAnalyzer(ABC):
@@ -98,6 +105,9 @@ class WaterBodyTargetAnalyzer(BaseTargetAnalyzer):
         wb_res = water_body_analyzer.analyze(raster_path, image_id=image_id, threshold_method="adaptive")
         candidates = []
         for c in wb_res.candidates:
+            spec_mean = getattr(c, "spectral_mean", getattr(c, "spectral_mean_mndwi", c.threshold + 0.15))
+            c_lat = c.centroid["lat"] if isinstance(c.centroid, dict) else c.centroid[0]
+            c_lon = c.centroid["lon"] if isinstance(c.centroid, dict) else c.centroid[1]
             candidates.append(SpatialCandidate(
                 id=c.id,
                 target_type="water_body",
@@ -106,10 +116,35 @@ class WaterBodyTargetAnalyzer(BaseTargetAnalyzer):
                 area_uncertainty_ha=c.area_uncertainty_ha,
                 perimeter_m=c.perimeter_m,
                 geometry=c.geometry,
-                centroid=c.centroid,
-                spectral_mean=c.spectral_mean_mndwi,
-                properties={"mndwi_mean": c.spectral_mean_mndwi, "pixel_count": c.pixel_count},
+                centroid=(float(c_lat), float(c_lon)),
+                spectral_mean=float(spec_mean),
+                properties={"threshold": c.threshold, "pixel_count": c.pixel_count},
             ))
+
+        valid_cov = round(float(wb_res.valid_pixel_ratio), 4)
+        cloud_free = round(float(max(0.0, min(1.0, 1.0 - wb_res.cloud_contamination_ratio))), 4)
+        res_m = float(wb_res.resolution_m) if wb_res.resolution_m > 0 else 10.0
+        res_suit = round(float(min(1.0, max(0.1, 10.0 / max(0.1, res_m)))), 4)
+
+        if candidates:
+            top_cand = candidates[0]
+            thresh = wb_res.threshold_applied
+            s_diff = max(0.0, top_cand.spectral_mean - thresh)
+            spec_distinct = round(float(min(1.0, max(0.2, s_diff / max(0.1, 1.0 - thresh)))), 4)
+            geom_valid = 1.0
+            r_score = round(float(valid_cov * cloud_free * res_suit * spec_distinct * geom_valid), 4)
+        else:
+            spec_distinct = 0.2
+            geom_valid = 1.0
+            r_score = 0.0
+
+        r_factors = {
+            "valid_pixel_coverage": valid_cov,
+            "cloud_freedom": cloud_free,
+            "resolution_suitability": res_suit,
+            "spectral_distinctiveness": spec_distinct,
+            "geometry_validity": geom_valid,
+        }
 
         return TargetAnalysisResult(
             image_id=image_id,
@@ -118,9 +153,16 @@ class WaterBodyTargetAnalyzer(BaseTargetAnalyzer):
             total_detected_area_ha=wb_res.total_water_area_ha,
             mean_uncertainty_ha=wb_res.mean_uncertainty_ha,
             processing_time_sec=wb_res.processing_time_sec,
-            index_name="MNDWI",
-            threshold_used=wb_res.threshold_used,
+            index_name=wb_res.water_index_used,
+            threshold_used=wb_res.threshold_applied,
             is_empty=len(candidates) == 0,
+            valid_pixel_coverage=valid_cov,
+            cloud_freedom=cloud_free,
+            resolution_suitability=res_suit,
+            spectral_distinctiveness=spec_distinct,
+            geometry_validity=geom_valid,
+            reliability_score=r_score,
+            reliability_factors=r_factors,
         )
 
 
@@ -227,6 +269,31 @@ class BuiltUpTargetAnalyzer(BaseTargetAnalyzer):
         total_ha = sum(c.area_ha for c in candidates)
         mean_unc = float(np.mean([c.area_uncertainty_ha for c in candidates])) if candidates else 0.0
 
+        total_pixels = swir.size
+        valid_pixel_count = int(np.sum(valid))
+        valid_cov = round(float(valid_pixel_count / max(1, total_pixels)), 4)
+        cloud_free = 1.0
+        res_suit = round(float(min(1.0, max(0.1, 10.0 / max(0.1, gsd_m)))), 4)
+
+        if candidates:
+            top_cand = candidates[0]
+            s_diff = max(0.0, top_cand.spectral_mean - threshold)
+            spec_distinct = round(float(min(1.0, max(0.2, s_diff / max(0.1, 1.0 - threshold)))), 4)
+            geom_valid = 1.0
+            r_score = round(float(valid_cov * cloud_free * res_suit * spec_distinct * geom_valid), 4)
+        else:
+            spec_distinct = 0.2
+            geom_valid = 1.0
+            r_score = 0.0
+
+        r_factors = {
+            "valid_pixel_coverage": valid_cov,
+            "cloud_freedom": cloud_free,
+            "resolution_suitability": res_suit,
+            "spectral_distinctiveness": spec_distinct,
+            "geometry_validity": geom_valid,
+        }
+
         return TargetAnalysisResult(
             image_id=image_id,
             target_type="built_up",
@@ -237,6 +304,13 @@ class BuiltUpTargetAnalyzer(BaseTargetAnalyzer):
             index_name="NDBI",
             threshold_used=threshold,
             is_empty=len(candidates) == 0,
+            valid_pixel_coverage=valid_cov,
+            cloud_freedom=cloud_free,
+            resolution_suitability=res_suit,
+            spectral_distinctiveness=spec_distinct,
+            geometry_validity=geom_valid,
+            reliability_score=r_score,
+            reliability_factors=r_factors,
         )
 
 
@@ -332,6 +406,31 @@ class VegetationTargetAnalyzer(BaseTargetAnalyzer):
         total_ha = sum(c.area_ha for c in candidates)
         mean_unc = float(np.mean([c.area_uncertainty_ha for c in candidates])) if candidates else 0.0
 
+        total_pixels = nir.size
+        valid_pixel_count = int(np.sum(valid))
+        valid_cov = round(float(valid_pixel_count / max(1, total_pixels)), 4)
+        cloud_free = 1.0
+        res_suit = round(float(min(1.0, max(0.1, 10.0 / max(0.1, gsd_m)))), 4)
+
+        if candidates:
+            top_cand = candidates[0]
+            s_diff = max(0.0, top_cand.spectral_mean - threshold)
+            spec_distinct = round(float(min(1.0, max(0.2, s_diff / max(0.1, 1.0 - threshold)))), 4)
+            geom_valid = 1.0
+            r_score = round(float(valid_cov * cloud_free * res_suit * spec_distinct * geom_valid), 4)
+        else:
+            spec_distinct = 0.2
+            geom_valid = 1.0
+            r_score = 0.0
+
+        r_factors = {
+            "valid_pixel_coverage": valid_cov,
+            "cloud_freedom": cloud_free,
+            "resolution_suitability": res_suit,
+            "spectral_distinctiveness": spec_distinct,
+            "geometry_validity": geom_valid,
+        }
+
         return TargetAnalysisResult(
             image_id=image_id,
             target_type="vegetation",
@@ -342,6 +441,13 @@ class VegetationTargetAnalyzer(BaseTargetAnalyzer):
             index_name="NDVI",
             threshold_used=threshold,
             is_empty=len(candidates) == 0,
+            valid_pixel_coverage=valid_cov,
+            cloud_freedom=cloud_free,
+            resolution_suitability=res_suit,
+            spectral_distinctiveness=spec_distinct,
+            geometry_validity=geom_valid,
+            reliability_score=r_score,
+            reliability_factors=r_factors,
         )
 
 

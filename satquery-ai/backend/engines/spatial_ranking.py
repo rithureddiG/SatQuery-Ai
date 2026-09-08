@@ -228,13 +228,8 @@ class SpatialRankingEngine:
                 "threshold_applied": target_res.threshold_used,
                 "mean_uncertainty_ha": round(target_res.mean_uncertainty_ha, 4),
             },
-            reliability_score=0.92 if selected_candidate else 0.20,
-            reliability_factors={
-                "valid_pixel_coverage": 1.0,
-                "cloud_freedom": 0.95,
-                "resolution_suitability": 0.95,
-                "spectral_distinctiveness": 0.92 if selected_candidate else 0.40,
-            },
+            reliability_score=target_res.reliability_score if selected_candidate else round(target_res.reliability_score * 0.25, 4),
+            reliability_factors=target_res.reliability_factors,
             provenance_steps=[
                 {"step": 1, "tool": "raster_ingestion", "action": "Ingested raster bands and validated CRS", "duration_ms": 12},
                 {"step": 2, "tool": "spectral_target_index", "action": f"Computed {target_res.index_name} spectral index", "duration_ms": 35},
