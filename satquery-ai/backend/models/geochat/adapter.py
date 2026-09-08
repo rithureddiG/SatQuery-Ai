@@ -177,20 +177,31 @@ class GeoChatAdapter:
                     kwargs["images"] = image_tensor
 
                 with torch.inference_mode():
-                    output_ids = self._model.generate(
+                    gen_out = self._model.generate(
                         **kwargs,
                         max_new_tokens=256,
                         do_sample=False,
                         temperature=0.0,
+                        return_dict_in_generate=True,
+                        output_scores=True,
                     )
+                seq_ids = gen_out.sequences if hasattr(gen_out, "sequences") else gen_out
                 generated_text = self._tokenizer.decode(
-                    output_ids[0][inputs["input_ids"].shape[1]:],
+                    seq_ids[0][inputs["input_ids"].shape[1]:],
                     skip_special_tokens=True,
                 ).strip()
 
+                calc_confidence = None
+                if hasattr(gen_out, "scores") and gen_out.scores:
+                    try:
+                        token_probs = [float(torch.softmax(s[0], dim=-1).max().cpu()) for s in gen_out.scores]
+                        calc_confidence = round(float(np.mean(token_probs)), 3)
+                    except Exception:
+                        calc_confidence = None
+
                 return {
                     "answer": generated_text,
-                    "model_confidence": 0.90 if generated_text else None,
+                    "model_confidence": calc_confidence,
                     "model_name": "GeoChat-7B",
                     "model_version": "v1.0-4bit",
                     "weights_available": True,
@@ -266,21 +277,32 @@ class GeoChatAdapter:
                     kwargs["images"] = image_tensor
 
                 with torch.inference_mode():
-                    output_ids = self._model.generate(
+                    gen_out = self._model.generate(
                         **kwargs,
                         max_new_tokens=128,
                         do_sample=False,
+                        return_dict_in_generate=True,
+                        output_scores=True,
                     )
+                seq_ids = gen_out.sequences if hasattr(gen_out, "sequences") else gen_out
                 generated_text = self._tokenizer.decode(
-                    output_ids[0][inputs["input_ids"].shape[1]:],
+                    seq_ids[0][inputs["input_ids"].shape[1]:],
                     skip_special_tokens=True,
                 ).strip()
+
+                calc_confidence = None
+                if hasattr(gen_out, "scores") and gen_out.scores:
+                    try:
+                        token_probs = [float(torch.softmax(s[0], dim=-1).max().cpu()) for s in gen_out.scores]
+                        calc_confidence = round(float(np.mean(token_probs)), 3)
+                    except Exception:
+                        calc_confidence = None
 
                 parsed_boxes = parse_grounding_boxes(generated_text)
                 return {
                     "boxes": parsed_boxes,
                     "raw_output": generated_text,
-                    "model_confidence": 0.89 if parsed_boxes else None,
+                    "model_confidence": calc_confidence if parsed_boxes else None,
                     "model_name": "GeoChat-7B",
                     "model_version": "v1.0-4bit",
                     "weights_available": True,

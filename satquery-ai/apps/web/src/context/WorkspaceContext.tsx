@@ -43,7 +43,11 @@ export type LensMode =
   | 'NDWI'
   | 'NDBI'
   | 'CHANGE'
-  | 'EVIDENCE';
+  | 'EVIDENCE'
+  | 'MNDWI_DEBUG'
+  | 'CLOUD_MASK'
+  | 'WATER_BINARY_MASK'
+  | 'CONNECTED_COMPONENTS';
 export type TemporalViewMode = 'Swipe' | 'Side by Side' | 'Difference';
 export type MapTool = 'select' | 'pan' | 'box' | 'polygon' | 'pin' | 'measure' | 'measure_area' | 'inspect';
 export type VoiceStatus = 'IDLE' | 'LISTENING' | 'PROCESSING' | 'ERROR' | 'UNSUPPORTED';

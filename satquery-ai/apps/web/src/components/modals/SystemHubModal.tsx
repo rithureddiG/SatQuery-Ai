@@ -110,17 +110,28 @@ export const SystemHubModal: React.FC<SystemHubModalProps> = ({
                   {
                     id: 'geochat-7b',
                     name: 'GeoChat-7B',
-                    task: 'VQA & Grounding',
+                    task: 'VQA & Visual Grounding',
                     status: 'NOT_INSTALLED',
                     truth_state: 'CLASSICAL_FALLBACK',
-                    fallback_mechanism: 'Deterministic spectral-spatial grounded heuristic classifier',
+                    readiness: [
+                      { label: 'checkpoint installed', ready: false },
+                      { label: 'CUDA ready', ready: false },
+                      { label: 'multimodal tensor feeder verified', ready: true },
+                      { label: 'transparent offline qualification', ready: true },
+                    ],
+                    fallback_mechanism: 'Transparent offline qualification (boxes: [], confidence: None)',
                   },
                   {
                     id: 'changenet-v1',
                     name: 'Siamese ChangeNet',
-                    task: 'Bi-Temporal Change',
-                    status: 'READY_CPU',
+                    task: 'Bi-Temporal Change Detection',
+                    status: 'CLASSICAL_FALLBACK',
                     truth_state: 'UNTRAINED_MODEL',
+                    readiness: [
+                      { label: 'checkpoint verified on disk', ready: false },
+                      { label: 'trained on LEVIR-CD', ready: false, note: 'prototype only' },
+                      { label: 'classical spectral fallback active (ΔNDBI / ΔNDVI)', ready: true },
+                    ],
                     fallback_mechanism: 'Spectral index differential (ΔNDBI / ΔNDVI / ΔNDWI)',
                   },
                   {
@@ -129,7 +140,24 @@ export const SystemHubModal: React.FC<SystemHubModalProps> = ({
                     task: 'Optical + SAR Corroboration',
                     status: 'CLASSICAL_FALLBACK',
                     truth_state: 'CLASSICAL_FALLBACK',
+                    readiness: [
+                      { label: 'checkpoint unavailable', ready: false },
+                      { label: 'fusion head unlinked', ready: false },
+                      { label: 'spatial IoU consensus fallback active', ready: true },
+                    ],
                     fallback_mechanism: 'Spatial intersection IoU, consensus area, and discordance diagnosis',
+                  },
+                  {
+                    id: 'sam-rs',
+                    name: 'Segment Anything Model (SAM)',
+                    task: 'Sub-Pixel Mask Refinement',
+                    status: 'CLASSICAL_FALLBACK',
+                    truth_state: 'CLASSICAL_FALLBACK',
+                    readiness: [
+                      { label: 'checkpoint unavailable', ready: false },
+                      { label: 'classical Otsu / GrabCut fallback active', ready: true },
+                    ],
+                    fallback_mechanism: 'Adaptive Otsu / morphological boundary refinement',
                   },
                   {
                     id: 'sar-calibrator',
@@ -137,12 +165,17 @@ export const SystemHubModal: React.FC<SystemHubModalProps> = ({
                     task: 'SAR Backscatter & Lee Filter',
                     status: 'READY_CPU',
                     truth_state: 'REAL_MODEL',
+                    readiness: [
+                      { label: 'deterministic physics engine ready', ready: true },
+                      { label: 'Lee 5x5 speckle filter verified', ready: true },
+                      { label: 'σ⁰ dB backscatter calibration verified', ready: true },
+                    ],
                     fallback_mechanism: 'Physics-grounded deterministic engine',
                   },
                 ]).map((m: any) => (
                   <div
                     key={m.id}
-                    className="p-3 rounded-xl bg-neutral-900 border border-white/10 space-y-1.5"
+                    className="p-3 rounded-xl bg-neutral-900 border border-white/10 space-y-2"
                   >
                     <div className="flex items-center justify-between">
                       <div className="font-bold text-neutral-100 text-xs">{m.name}</div>
@@ -159,7 +192,24 @@ export const SystemHubModal: React.FC<SystemHubModalProps> = ({
                       </span>
                     </div>
                     <div className="text-[11px] text-neutral-400">{m.task}</div>
-                    <div className="text-[10px] text-neutral-500 pt-0.5 border-t border-neutral-800 flex items-center justify-between">
+
+                    {/* Readiness Checklist */}
+                    {m.readiness && (
+                      <div className="grid grid-cols-2 gap-1 pt-1 border-t border-neutral-800/80 text-[10px]">
+                        {m.readiness.map((item: any, idx: number) => (
+                          <div key={idx} className="flex items-center gap-1.5">
+                            <span className={item.ready ? "text-emerald-400 font-bold" : "text-neutral-500"}>
+                              {item.ready ? "●" : "○"}
+                            </span>
+                            <span className={item.ready ? "text-neutral-200" : "text-neutral-400"}>
+                              {item.label} {item.note ? `(${item.note})` : ''}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="text-[10px] text-neutral-500 pt-1 border-t border-neutral-800 flex items-center justify-between">
                       <span>Fallback: {m.fallback_mechanism || 'None'}</span>
                       {m.checkpoint_sha256 && (
                         <span>SHA: {m.checkpoint_sha256.slice(0, 10)}...</span>

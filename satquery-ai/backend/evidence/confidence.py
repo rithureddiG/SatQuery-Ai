@@ -60,7 +60,7 @@ def calculate_spatial_resolution_score(x_res: float, y_res: float, task_type: st
 
 
 def compute_vqa_confidence(
-    model_confidence: float,
+    model_confidence: Optional[float] = None,
     x_res: float = 10.0,
     y_res: float = 10.0,
     box_area_ratio: Optional[float] = None,
@@ -68,26 +68,37 @@ def compute_vqa_confidence(
     """Compute deterministic evidence score for a single-image VQA or Grounding task."""
     res_score = calculate_spatial_resolution_score(x_res, y_res, task_type="vqa")
 
-    # Weights: 70% model certainty from softmax/logits, 30% spatial GSD suitability
-    weights = {"model": 0.70, "resolution": 0.30}
-    overall = (model_confidence * weights["model"]) + (res_score * weights["resolution"])
-    overall = round(max(0.0, min(1.0, overall)), 2)
-
-    notes = [
-        f"Model certainty: {int(model_confidence * 100)}%",
-        f"Spatial resolution rating: {int(res_score * 100)}% (GSD: {round(x_res, 1)}m)",
-        f"Evidence score: {int(overall * 100)}% (Resolution & Model Composite)",
-    ]
+    if model_confidence is not None:
+        # Weights: 70% model certainty from softmax/logits, 30% spatial GSD suitability
+        weights = {"model": 0.70, "resolution": 0.30}
+        overall = (model_confidence * weights["model"]) + (res_score * weights["resolution"])
+        overall = round(max(0.0, min(1.0, overall)), 2)
+        calibrated = platt_scale(overall)
+        model_score_val = round(model_confidence, 2)
+        notes = [
+            f"Model certainty: {int(model_confidence * 100)}%",
+            f"Spatial resolution rating: {int(res_score * 100)}% (GSD: {round(x_res, 1)}m)",
+            f"Evidence score: {int(overall * 100)}% (Resolution & Model Composite)",
+        ]
+    else:
+        # Model weights offline: do NOT fabricate a model confidence score
+        weights = {"model": 0.0, "resolution": 1.0}
+        overall = round(res_score, 2)
+        calibrated = None
+        model_score_val = None
+        notes = [
+            "Model certainty: None (Offline heuristic / rule-based fallback active)",
+            f"Spatial resolution rating: {int(res_score * 100)}% (GSD: {round(x_res, 1)}m)",
+            "Evidence score: GSD suitability only; neural probability uncalibrated",
+        ]
 
     if box_area_ratio is not None and box_area_ratio < 0.001:
         notes.append("Warning: Grounded object is extremely small relative to scene dimensions.")
 
-    calibrated = platt_scale(overall)
-
     return ConfidenceScore(
         overall=overall,
         calibrated_probability=calibrated,
-        model_score=round(model_confidence, 2),
+        model_score=model_score_val,
         resolution_score=round(res_score, 2),
         factors=weights,
         notes=notes,
@@ -95,8 +106,8 @@ def compute_vqa_confidence(
 
 
 def compute_multimodal_confidence(
-    model_confidence: float,
-    registration_quality: float,
+    model_confidence: Optional[float] = None,
+    registration_quality: float = 1.0,
     sar_agreement: Optional[float] = None,
     x_res: float = 10.0,
     y_res: float = 10.0,
@@ -104,37 +115,61 @@ def compute_multimodal_confidence(
     """Compute deterministic evidence score for bi-temporal or optical-SAR analysis."""
     res_score = calculate_spatial_resolution_score(x_res, y_res)
 
-    if sar_agreement is not None:
-        weights = {"model": 0.45, "registration": 0.30, "sar": 0.15, "resolution": 0.10}
-        overall = (
-            (model_confidence * weights["model"])
-            + (registration_quality * weights["registration"])
-            + (sar_agreement * weights["sar"])
-            + (res_score * weights["resolution"])
-        )
+    if model_confidence is not None:
+        if sar_agreement is not None:
+            weights = {"model": 0.45, "registration": 0.30, "sar": 0.15, "resolution": 0.10}
+            overall = (
+                (model_confidence * weights["model"])
+                + (registration_quality * weights["registration"])
+                + (sar_agreement * weights["sar"])
+                + (res_score * weights["resolution"])
+            )
+        else:
+            weights = {"model": 0.55, "registration": 0.30, "resolution": 0.15}
+            overall = (
+                (model_confidence * weights["model"])
+                + (registration_quality * weights["registration"])
+                + (res_score * weights["resolution"])
+            )
+        overall = round(max(0.0, min(1.0, overall)), 2)
+        calibrated = platt_scale(overall)
+        model_score_val = round(model_confidence, 2)
+        notes = [
+            f"Model probability: {int(model_confidence * 100)}%",
+            f"Co-registration quality: {int(registration_quality * 100)}%",
+            f"Evidence score: {int(overall * 100)}% (Resolution, Registration & Model Composite)",
+        ]
     else:
-        weights = {"model": 0.55, "registration": 0.30, "resolution": 0.15}
-        overall = (
-            (model_confidence * weights["model"])
-            + (registration_quality * weights["registration"])
-            + (res_score * weights["resolution"])
-        )
+        # Fallback mode (spectral differential without neural weights)
+        if sar_agreement is not None:
+            weights = {"model": 0.0, "registration": 0.50, "sar": 0.30, "resolution": 0.20}
+            overall = (
+                (registration_quality * weights["registration"])
+                + (sar_agreement * weights["sar"])
+                + (res_score * weights["resolution"])
+            )
+        else:
+            weights = {"model": 0.0, "registration": 0.65, "resolution": 0.35}
+            overall = (
+                (registration_quality * weights["registration"])
+                + (res_score * weights["resolution"])
+            )
+        overall = round(max(0.0, min(1.0, overall)), 2)
+        calibrated = None
+        model_score_val = None
+        notes = [
+            "Model probability: None (Deterministic spectral differential fallback active)",
+            f"Co-registration quality: {int(registration_quality * 100)}%",
+            f"Evidence score: {int(overall * 100)}% (Registration & Physical Sensor Suitability)",
+        ]
 
-    overall = round(max(0.0, min(1.0, overall)), 2)
-    calibrated = platt_scale(overall)
-
-    notes = [
-        f"Model probability: {int(model_confidence * 100)}%",
-        f"Co-registration quality: {int(registration_quality * 100)}%",
-        f"Evidence score: {int(overall * 100)}% (Resolution, Registration & Model Composite)",
-    ]
     if sar_agreement is not None:
         notes.append(f"SAR cross-modal agreement: {int(sar_agreement * 100)}%")
 
     return ConfidenceScore(
         overall=overall,
         calibrated_probability=calibrated,
-        model_score=round(model_confidence, 2),
+        model_score=model_score_val,
         resolution_score=round(res_score, 2),
         registration_score=round(registration_quality, 2),
         sar_agreement_score=round(sar_agreement, 2) if sar_agreement is not None else None,

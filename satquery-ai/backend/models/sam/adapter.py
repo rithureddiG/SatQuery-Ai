@@ -89,7 +89,7 @@ class SAMModelAdapter:
         # Given a bounding box, perform local color-histogram segmentation
         mask_uint8 = np.zeros((h, w), dtype=np.uint8)
         polygon = []
-        score = 0.85
+        score = None  # Explicit None: neural SAM weights not loaded
 
         if HAS_CV2 and (x2 - x1) > 4 and (y2 - y1) > 4:
             try:
@@ -99,7 +99,6 @@ class SAMModelAdapter:
                 _, thresh = cv2.threshold(gray_roi, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
                 mask_uint8[y1:y2, x1:x2] = thresh
                 polygon = self._mask_to_polygon(mask_uint8)
-                score = 0.88
             except Exception:
                 mask_uint8[y1:y2, x1:x2] = 255
                 polygon = [[x1, y1], [x2, y1], [x2, y2], [x1, y2], [x1, y1]]

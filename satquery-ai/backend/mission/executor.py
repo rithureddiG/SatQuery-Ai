@@ -102,12 +102,12 @@ class MissionExecutor:
         warnings: List[str] = []
 
         synthesized_answer = ""
-        overall_confidence = 0.88
+        overall_confidence = None
         confidence_breakdown = {
-            "model_confidence": 0.88,
-            "registration_quality": 0.92,
+            "model_confidence": None,
+            "registration_quality": 1.0,
             "data_resolution": 0.90,
-            "sensor_agreement": 0.85,
+            "sensor_agreement": None,
         }
         evidence_artifacts: Dict[str, Any] = {}
 
@@ -302,9 +302,11 @@ class MissionExecutor:
         total_dur = time.perf_counter() - t_start
 
         # Composite confidence calculation
-        overall_confidence = round(
-            sum(confidence_breakdown.values()) / max(1, len(confidence_breakdown)), 3
-        )
+        valid_factors = [v for v in confidence_breakdown.values() if isinstance(v, (int, float))]
+        if overall_confidence is None:
+            overall_confidence = round(
+                sum(valid_factors) / max(1, len(valid_factors)), 3
+            ) if valid_factors else None
 
         return MissionExecutionReport(
             mission_id=dag.mission_id,

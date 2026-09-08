@@ -231,3 +231,16 @@ benchmarks:
     split: "test"
     target_metric: "Macro F1"
     verified_result: null
+
+truth_lock:
+  version: "v1.0"
+  status: "LOCKED"
+  verification_suite: "satquery-ai/scripts/verify_truth_lock.py"
+  invariants_enforced:
+    source_image_id_lock: true
+    zero_synthetic_confidence: true
+    zero_hardcoded_boxes: true
+    zero_unverified_levir_claims: true
+    cross_format_report_parity: true
+    bitwise_replay_auditing: true
+    honest_water_abstention: true

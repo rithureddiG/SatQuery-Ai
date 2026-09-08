@@ -104,16 +104,22 @@ def generate_pdf_report(job: AnalysisJob) -> bytes:
         story.append(Paragraph(f"{claim_text}", styles["Normal"]))
         story.append(Spacer(1, 10))
 
-        # Quantified Change Metrics if present
-        if "change_percent" in res or "semantic_change" in res:
-            story.append(Paragraph("<b>Quantified Land Surface Metrics:</b>", styles["Heading3"]))
+        # Quantified Surface Metrics if present (Change detection, Spatial ranking, Water body)
+        total_m2 = res.get("total_area_m2") or (res.get("finding", {}).get("area_m2") if isinstance(res.get("finding"), dict) else 0.0) or 0.0
+        total_ha = res.get("total_area_ha") or (res.get("finding", {}).get("area_ha") if isinstance(res.get("finding"), dict) else 0.0) or 0.0
+
+        if total_ha > 0 or "change_percent" in res or "semantic_change" in res:
+            story.append(Paragraph("<b>Quantified Surface Measurement Metrics:</b>", styles["Heading3"]))
             ch_data = [
                 ["Surface Metric", "Measurement", "Unit"],
-                ["Surface Alteration", f"{res.get('change_percent', 0.0)}%", "Area Percentage"],
-                ["Total Extent Changed", f"{res.get('total_area_m2', 0):,.1f}", "Square Meters (m²)"],
-                ["Ground Surface Area", f"{res.get('total_area_ha', 0)}", "Hectares (ha)"],
-                ["Contiguous Clusters", str(res.get("cluster_count", 0)), "Morphological Polygons"],
             ]
+            if "change_percent" in res:
+                ch_data.append(["Surface Alteration", f"{res.get('change_percent', 0.0)}%", "Area Percentage"])
+            ch_data.extend([
+                ["Total Extent Measured", f"{total_m2:,.1f}", "Square Meters (m²)"],
+                ["Ground Surface Area", f"{total_ha:.4f}", "Hectares (ha)"],
+                ["Identified Features", str(res.get("cluster_count") or res.get("candidate_count") or 1), "Contour Polygons"],
+            ])
             t = Table(ch_data, colWidths=[180, 180, 180])
             t.setStyle(
                 TableStyle([

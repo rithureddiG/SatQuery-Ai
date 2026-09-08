@@ -50,7 +50,13 @@ def run_single_image_vqa_pipeline(
     # Step 2: VLM Inference (GeoChat-7B)
     t1 = time.perf_counter()
     vlm_result = geochat_adapter.vqa(image_path, question)
-    raw_confidence = vlm_result.get("model_confidence", 0.85)
+    raw_confidence = vlm_result.get("model_confidence")
+
+    certainty_summary = (
+        f"Model Certainty: {int(raw_confidence * 100)}%"
+        if raw_confidence is not None
+        else "Model Certainty: None (Offline Fallback)"
+    )
 
     steps.append(
         ExecutionStep(
@@ -60,7 +66,7 @@ def run_single_image_vqa_pipeline(
             status="completed",
             duration_ms=int((time.perf_counter() - t1) * 1000),
             model="GeoChat-7B",
-            output_summary=f"Model Certainty: {int(raw_confidence * 100)}%",
+            output_summary=certainty_summary,
         )
     )
 

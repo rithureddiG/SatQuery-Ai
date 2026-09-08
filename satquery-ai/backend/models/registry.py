@@ -166,16 +166,16 @@ class ModelRegistry:
                 task="bitemporal_change_detection",
                 architecture="Siamese ResNet18 + Feature Pyramid Difference Head",
                 pretrained_source="Torchvision ResNet-18",
-                task_finetuned=True,  # Fine-tuned by SatQuery
-                training_dataset="LEVIR-CD (Building Change Pairs)",
-                validation_dataset="LEVIR-CD Validation Split",
+                task_finetuned=False,  # Unverified on real LEVIR-CD; prototype only
+                training_dataset="synthetic_prototype",
+                validation_dataset="synthetic_val",
                 checkpoint="checkpoints/changenet_best.pt",
-                checkpoint_sha256="4d9a78e1b2f90a8837e5627680ef0a9557f6b98687b1c3e38706d871a25be11b",
-                training_commit="git-satquery-changenet-v2",
-                evaluation_metrics={"val_iou": 0.824, "val_f1": 0.895, "pixel_accuracy": 0.985},
-                runtime_status="READY_CPU",
+                checkpoint_sha256=None,  # No real weights verified on disk
+                training_commit="prototype-synthetic-v1",
+                evaluation_metrics={"status": "unverified_checkpoint"},
+                runtime_status="CLASSICAL_FALLBACK",
                 vram_estimate_mb=2500,
-                description="Bi-temporal change detection with connected components and area computation",
+                description="Bi-temporal change detection with spectral differential fallback (ΔNDBI / ΔNDVI / ΔNDWI)",
                 capabilities=["bitemporal_change", "contour_extraction", "altered_area_ha"],
             ),
         )

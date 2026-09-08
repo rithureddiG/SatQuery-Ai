@@ -269,16 +269,32 @@ export const InteractiveEarthViewer: React.FC<InteractiveEarthViewerProps> = ({
     }
   }, [ws.zoom]);
 
-  // Listen to selectedClusterId and fly to evidence cluster
+  // Listen to selectedClusterId and fly/fit to evidence cluster
   useEffect(() => {
     if (!mapInstanceRef.current || !selectedClusterId) return;
     const c = clusters.find((item) => item.id === selectedClusterId);
-    if (c?.center) {
-      mapInstanceRef.current.flyTo([c.center.lat, c.center.lon], 16, {
-        duration: 1.2,
-        easeLinearity: 0.25,
-      });
-    }
+    if (!c) return;
+
+    import('leaflet').then((L) => {
+      if (c.geometry && (c.geometry.type === 'Polygon' || c.geometry.type === 'MultiPolygon')) {
+        try {
+          const geoLayer = L.geoJSON(c.geometry);
+          const bounds = geoLayer.getBounds();
+          if (bounds.isValid() && mapInstanceRef.current) {
+            mapInstanceRef.current.fitBounds(bounds, { padding: [60, 60], maxZoom: 16 });
+            return;
+          }
+        } catch (e) {
+          // Fall back to center flyTo
+        }
+      }
+      if (c.center && mapInstanceRef.current) {
+        mapInstanceRef.current.flyTo([c.center.lat, c.center.lon], 16, {
+          duration: 1.2,
+          easeLinearity: 0.25,
+        });
+      }
+    });
   }, [selectedClusterId, clusters]);
 
   // Switch Basemap Tiles Dynamically
@@ -373,6 +389,18 @@ export const InteractiveEarthViewer: React.FC<InteractiveEarthViewerProps> = ({
       case 'EVIDENCE':
         filterStyle = 'contrast(1.2) brightness(0.95)';
         break;
+      case 'MNDWI_DEBUG':
+        filterStyle = 'contrast(2.2) saturate(2.8) hue-rotate(195deg) brightness(1.2)';
+        break;
+      case 'CLOUD_MASK':
+        filterStyle = 'contrast(2.6) grayscale(70%) brightness(1.35)';
+        break;
+      case 'WATER_BINARY_MASK':
+        filterStyle = 'contrast(4.0) grayscale(100%) invert(85%)';
+        break;
+      case 'CONNECTED_COMPONENTS':
+        filterStyle = 'contrast(1.9) saturate(3.2) hue-rotate(110deg)';
+        break;
       default:
         filterStyle = 'none';
     }
@@ -388,8 +416,7 @@ export const InteractiveEarthViewer: React.FC<InteractiveEarthViewerProps> = ({
     import('leaflet').then((L) => {
       clustersGroupRef.current.clearLayers();
 
-      const shouldShowClusters =
-        activeLens === 'CHANGE' || activeLens === 'EVIDENCE' || mapMode === 'ANALYZE';
+      const shouldShowClusters = clusters.length > 0;
 
       if (!shouldShowClusters) return;
 
@@ -402,7 +429,6 @@ export const InteractiveEarthViewer: React.FC<InteractiveEarthViewerProps> = ({
         const isSelected = selectedClusterId === cluster.id;
         const centerLat = cluster.center.lat;
         const centerLon = cluster.center.lon;
-        const delta = 0.0035;
 
         let layer: any;
         const hasRealPolygon =
@@ -420,17 +446,13 @@ export const InteractiveEarthViewer: React.FC<InteractiveEarthViewerProps> = ({
             },
           });
         } else {
-          const bounds: [[number, number], [number, number]] = [
-            [centerLat - delta, centerLon - delta * 1.4],
-            [centerLat + delta, centerLon + delta * 1.4],
-          ];
-
-          layer = L.rectangle(bounds, {
-            color: isSelected ? '#10B981' : '#F59E0B',
-            weight: isSelected ? 3 : 1.8,
-            fillColor: isSelected ? '#10B981' : '#EF4444',
-            fillOpacity: isSelected ? 0.35 : 0.22,
-            dashArray: isSelected ? undefined : '4, 4',
+          // Zero fake rectangles: Render exact centroid point marker if polygon coordinates not available
+          layer = L.circleMarker([centerLat, centerLon], {
+            radius: isSelected ? 8 : 5,
+            color: isSelected ? '#10B981' : '#0284C7',
+            weight: 2,
+            fillColor: isSelected ? '#10B981' : '#38BDF8',
+            fillOpacity: 0.85,
           });
         }
 

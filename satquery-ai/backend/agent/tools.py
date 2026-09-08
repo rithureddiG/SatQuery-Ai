@@ -48,8 +48,9 @@ def single_image_vqa_tool(image_path: str, question: str) -> Dict[str, Any]:
     res = geochat_adapter.vqa(p, question)
     return {
         "answer": res["answer"],
-        "model_confidence": res.get("model_confidence", 0.85),
+        "model_confidence": res.get("model_confidence"),
         "model": "GeoChat-7B",
+        "fallback_used": res.get("fallback_used", False),
     }
 
 
@@ -70,8 +71,9 @@ def visual_grounding_tool(image_path: str, referring_expression: str) -> Dict[st
     res = geochat_adapter.ground(p, referring_expression)
     return {
         "boxes": res.get("boxes", []),
-        "model_confidence": res.get("model_confidence", 0.87),
+        "model_confidence": res.get("model_confidence"),
         "model": "GeoChat-7B",
+        "fallback_used": res.get("fallback_used", False),
     }
 
 

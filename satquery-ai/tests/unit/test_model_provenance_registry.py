@@ -39,14 +39,15 @@ class TestModelProvenanceRegistry:
         assert "RSVQA" in geochat_meta.training_dataset
         assert "VRSBench" in geochat_meta.validation_dataset
 
-    def test_changenet_provenance_fine_tuning(self):
-        """Verify that ChangeNet is registered with LEVIR-CD training provenance and SHA-256."""
+    def test_changenet_provenance_prototype_truth(self):
+        """Verify that ChangeNet truthfully reports prototype status when real weights are not present."""
         changenet_meta = model_registry.get_provenance("changenet")
         assert changenet_meta is not None
-        assert changenet_meta.task_finetuned is True
-        assert "LEVIR-CD" in changenet_meta.training_dataset
-        assert changenet_meta.checkpoint_sha256 is not None
-        assert len(changenet_meta.checkpoint_sha256) == 64  # Valid SHA-256 hex string
+        # Truth state: SatQuery does NOT claim verified LEVIR-CD weights when file is not on disk
+        assert changenet_meta.task_finetuned is False
+        assert changenet_meta.training_dataset == "synthetic_prototype"
+        assert changenet_meta.checkpoint_sha256 is None
+        assert changenet_meta.runtime_status == "CLASSICAL_FALLBACK"
 
     def test_water_body_analyzer_provenance(self):
         """Verify that WaterBodyAnalyzer is documented as a deterministic GIS specialist."""

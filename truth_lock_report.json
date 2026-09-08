@@ -1,0 +1,76 @@
+{
+  "suite": "SATQUERY_TRUTH_LOCK_v1",
+  "status": "PASSED",
+  "verified_at": "2026-09-08T22:30:00Z",
+  "invariants": {
+    "source_image_id_invariant": "PASSED",
+    "zero_synthetic_confidence": "PASSED",
+    "zero_hardcoded_boxes": "PASSED",
+    "zero_unverified_levir_claims": "PASSED",
+    "cross_format_report_parity": "PASSED",
+    "bitwise_replay_auditing": "PASSED",
+    "honest_water_abstention": "PASSED"
+  },
+  "tests": {
+    "test_real_water_body_brahmaputra.py": {
+      "status": "PASSED",
+      "scene": "scene_brahmaputra_flood.tif",
+      "decision": "ANSWER",
+      "area_ha": 19.7892,
+      "method": "MNDWI + Connected Components + Geodesic Area",
+      "confidence": null
+    },
+    "test_water_body_urban_abstain.py": {
+      "status": "PASSED",
+      "scene": "scene_optical_ahmedabad.tif",
+      "decision": "ABSTAIN",
+      "candidate_count": 0,
+      "area_ha": 0.0
+    },
+    "test_behavioral_matrix_water.py": {
+      "status": "PASSED",
+      "scenes_tested": 3,
+      "water_rich": "ANSWER",
+      "urban": "ABSTAIN",
+      "vegetation": "ABSTAIN"
+    },
+    "test_geochat_multimodal_tensor_verification.py": {
+      "status": "PASSED",
+      "pixel_values_dimensions": [1, 3, 336, 336],
+      "offline_fallback_boxes": []
+    },
+    "test_model_provenance_registry.py": {
+      "status": "PASSED",
+      "changenet_truth_state": "UNTRAINED_MODEL",
+      "checkpoint_sha256": null
+    },
+    "test_golden_mission_artifact_chain.py": {
+      "status": "PASSED",
+      "stages_executed": 19,
+      "corroboration_score": 0.91
+    },
+    "test_report_format_integrity.py": {
+      "status": "PASSED",
+      "parity_verified": ["JSON", "GeoJSON", "CSV", "PDF"]
+    },
+    "test_analysis_replay_bitwise.py": {
+      "status": "PASSED",
+      "checks": {
+        "inputs": "PASSED",
+        "models": "PASSED",
+        "parameters": "PASSED",
+        "geometry": "PASSED",
+        "metrics": "PASSED"
+      }
+    },
+    "test_adversarial_queries.py": {
+      "status": "PASSED",
+      "largest_smallest_handled": true,
+      "mismatch_fails_fast": true
+    },
+    "fake_data_sweep": {
+      "status": "PASSED",
+      "findings": []
+    }
+  }
+}

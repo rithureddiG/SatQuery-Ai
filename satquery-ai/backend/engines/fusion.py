@@ -41,7 +41,7 @@ class FusionResult:
     total_detected_area_m2: Optional[float] = None
 
     # Fused confidence
-    mean_fused_confidence: float = 0.85
+    mean_fused_confidence: float = 0.0
     consensus_confidence_gain: float = 0.0  # Boost from multi-sensor agreement
 
     # Binary and categorical spatial masks

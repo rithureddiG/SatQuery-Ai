@@ -56,7 +56,7 @@ class EvidenceGate:
         registration_quality: float = 1.0,
         spatial_overlap: float = 1.0,
         cloud_fraction: float = 0.0,
-        model_confidence: float = 0.85,
+        model_confidence: Optional[float] = None,
         has_cross_modal_corroboration: bool = False,
     ) -> GateResult:
         """Evaluate evidence quality and decide whether to ANSWER, QUALIFY, or ABSTAIN."""
@@ -73,13 +73,12 @@ class EvidenceGate:
                 decision=GateDecision.ABSTAIN,
                 confidence=registration_quality,
                 reasons=reasons,
-                recommended_action="Execute manual ground control point (GCP) alignment or upload pre-rectified imagery.",
+                recommended_action="Re-run image co-registration with AKAZE or verify georeferencing metadata.",
             )
 
         if spatial_overlap < self.MIN_SPATIAL_OVERLAP:
             reasons.append(
-                f"Spatial bounding box overlap ({spatial_overlap * 100:.1f}%) is below minimum requirement ({self.MIN_SPATIAL_OVERLAP * 100:.0f}%). "
-                "The selected images observe different geographic areas."
+                f"Spatial overlap between observations ({spatial_overlap * 100:.1f}%) is insufficient for comparison."
             )
             return GateResult(
                 decision=GateDecision.ABSTAIN,
@@ -101,7 +100,8 @@ class EvidenceGate:
             )
 
         # 2. Qualification Checks (Answer with Warning)
-        effective_conf = model_confidence
+        base_conf = model_confidence if model_confidence is not None else round(registration_quality * (1.0 - cloud_fraction * 0.4), 3)
+        effective_conf = base_conf
 
         if 0.30 <= cloud_fraction <= self.MAX_CLOUD_CONTAMINATION:
             caveats.append(
@@ -117,7 +117,7 @@ class EvidenceGate:
             )
             effective_conf *= 0.90
 
-        if not has_cross_modal_corroboration and model_confidence < 0.75:
+        if not has_cross_modal_corroboration and model_confidence is not None and model_confidence < 0.75:
             caveats.append(
                 "Finding is based on single-sensor optical inference without SAR cross-verification."
             )

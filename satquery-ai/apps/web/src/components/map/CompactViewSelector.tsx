@@ -19,6 +19,10 @@ const VIEW_MODES: { id: LensMode; label: string; desc: string; category: string 
   { id: 'SAR', label: 'SAR Backscatter (σ⁰ dB)', desc: 'Calibrated Sentinel-1 microwave radar', category: 'Radar' },
   { id: 'CHANGE', label: 'Change Probability Mask', desc: 'Siamese ChangeNet neural alteration', category: 'Analytics' },
   { id: 'EVIDENCE', label: 'Optical + SAR Consensus', desc: 'Deterministic multi-sensor corroboration', category: 'Analytics' },
+  { id: 'MNDWI_DEBUG', label: 'MNDWI (Green - SWIR)', desc: 'Modified Normalized Difference Water Index', category: 'Debug Pipeline' },
+  { id: 'CLOUD_MASK', label: 'Cloud Quality Mask', desc: 'QA60 & SCL cloud contamination filter', category: 'Debug Pipeline' },
+  { id: 'WATER_BINARY_MASK', label: 'Water Binary Mask', desc: 'Thresholded surface water classification', category: 'Debug Pipeline' },
+  { id: 'CONNECTED_COMPONENTS', label: 'Connected Components', desc: 'Morphological contiguous region labeling', category: 'Debug Pipeline' },
 ];
 
 export const CompactViewSelector: React.FC<CompactViewSelectorProps> = ({
