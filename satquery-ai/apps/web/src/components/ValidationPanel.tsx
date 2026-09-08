@@ -1,12 +1,13 @@
 import React from 'react';
 import { ValidationResult } from '../types';
-import { CheckCircle2, AlertTriangle, XCircle, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, XCircle, ShieldCheck, Camera } from 'lucide-react';
 
 interface ValidationPanelProps {
   validation: ValidationResult;
+  onSnapshot?: () => void;
 }
 
-export const ValidationPanel: React.FC<ValidationPanelProps> = ({ validation }) => {
+export const ValidationPanel: React.FC<ValidationPanelProps> = ({ validation, onSnapshot }) => {
   const hasWarnings = validation.warnings.length > 0;
   const hasErrors = validation.errors.length > 0;
 
@@ -64,6 +65,19 @@ export const ValidationPanel: React.FC<ValidationPanelProps> = ({ validation }) 
               <span>{warn}</span>
             </div>
           ))}
+        </div>
+      )}
+
+      {onSnapshot && (
+        <div className="pt-2 border-t border-space-700/60 flex items-center justify-between">
+          <span className="text-[11px] font-mono text-slate-400">Diagnostic Summary</span>
+          <button
+            onClick={onSnapshot}
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-mono font-medium transition-colors"
+          >
+            <Camera className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Snapshot State</span>
+          </button>
         </div>
       )}
     </div>

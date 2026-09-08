@@ -20,6 +20,9 @@ import {
 } from '../types';
 import { fetchHealth, fetchImagesList, executeAgentQuery } from '../lib/api';
 import { GOLDEN_MISSION_SPEC, createCanonicalFinding } from '../lib/goldenMission';
+import { InspectionDossier, PREVIOUS_INSPECTION_DOSSIERS } from '../types/dossier';
+export type { InspectionDossier };
+export { PREVIOUS_INSPECTION_DOSSIERS };
 
 export type RailSection =
   | 'MISSION'
@@ -58,6 +61,8 @@ export interface Scenario {
   lon: number;
   utmZone: string;
   areaAoi: string;
+  dateT1?: string;
+  dateT2?: string;
 }
 
 export interface DatasetItem {
@@ -135,6 +140,8 @@ export const CANONICAL_MISSIONS: Scenario[] = [
     lon: 77.5946,
     utmZone: 'EPSG:32643 (UTM Zone 43N)',
     areaAoi: '12.64 km²',
+    dateT1: '2024-03-15',
+    dateT2: '2026-03-19',
     prompts: [
       'Has the built-up area increased between the two dates? Use the optical and SAR observations to corroborate the result and report the total changed area in hectares.',
       'What changed between these dates and where did built-up area increase?',
@@ -153,6 +160,8 @@ export const CANONICAL_MISSIONS: Scenario[] = [
     lon: 77.5946,
     utmZone: 'EPSG:32643 (UTM Zone 43N)',
     areaAoi: '10.80 km²',
+    dateT1: '2025-05-10',
+    dateT2: '2026-01-14',
     prompts: [
       'Describe the dominant land cover and major objects visible in this image.',
       'What land cover types are visible in the northern quadrant?',
@@ -170,6 +179,8 @@ export const CANONICAL_MISSIONS: Scenario[] = [
     lon: 92.9376,
     utmZone: 'EPSG:32646 (UTM Zone 46N)',
     areaAoi: '18.45 km²',
+    dateT1: '2025-07-22',
+    dateT2: '2026-02-18',
     prompts: [
       'Where is the largest water body?',
       'Highlight the primary river channel and compute its area.',
@@ -187,6 +198,8 @@ export const CANONICAL_MISSIONS: Scenario[] = [
     lon: 77.5946,
     utmZone: 'EPSG:32643 (UTM Zone 43N)',
     areaAoi: '12.64 km²',
+    dateT1: '2024-03-15',
+    dateT2: '2026-03-19',
     prompts: [
       'What changed between these two observations and where?',
       'Detect all altered infrastructure clusters.',
@@ -204,6 +217,8 @@ export const CANONICAL_MISSIONS: Scenario[] = [
     lon: 92.9376,
     utmZone: 'EPSG:32646 (UTM Zone 46N)',
     areaAoi: '15.20 km²',
+    dateT1: '2024-11-04',
+    dateT2: '2025-11-20',
     prompts: [
       'Use both images together to identify regions that are likely built-up.',
       'Cross-examine optical water masks against SAR radar backscatter.',
@@ -221,6 +236,8 @@ export const CANONICAL_MISSIONS: Scenario[] = [
     lon: 78.4867,
     utmZone: 'EPSG:32644 (UTM Zone 44N)',
     areaAoi: '25.0 km²',
+    dateT1: '2025-09-12',
+    dateT2: '2026-09-06',
     prompts: [
       'Analyze industrial and built-up expansion around Hyderabad between T1 and T2',
       'Corroborate optical findings with Sentinel-1 SAR -14.5 dB backscatter',
@@ -750,6 +767,10 @@ interface WorkspaceContextType {
   setQueryText: (text: string) => void;
   lastAskedQuery: string;
   findingTitle: string;
+  setFindingTitle: (title: string) => void;
+  setCustomInsight: (insight: string) => void;
+  setCustomAreaHa: (area: string) => void;
+  setCustomAreaM2: (area: string) => void;
   queryState: 'IDLE' | 'SUBMITTING' | 'VALIDATING' | 'ANALYZING' | 'COMPLETE' | 'ERROR';
   isAnalyzing: boolean;
   executionStepIndex: number;
@@ -788,6 +809,16 @@ interface WorkspaceContextType {
   setIsEvidenceModalOpen: (open: boolean) => void;
   activeEvidenceDetail: EvidenceLayerItem | null;
   setActiveEvidenceDetail: (detail: EvidenceLayerItem | null) => void;
+
+  // Dossier Archive & Search
+  isDossierSearchOpen: boolean;
+  setIsDossierSearchOpen: (open: boolean) => void;
+  openDossierSearch: () => void;
+  dossiers: InspectionDossier[];
+  setDossiers: React.Dispatch<React.SetStateAction<InspectionDossier[]>>;
+  activeDossierId: string | null;
+  setActiveDossierId: (id: string | null) => void;
+  loadDossier: (dossier: InspectionDossier) => void;
 
   // Workstation Mode & Location
   workstationMode: WorkstationMode;
@@ -988,6 +1019,36 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
   const [isTraceModalOpen, setIsTraceModalOpen] = useState<boolean>(false);
   const [isEvidenceModalOpen, setIsEvidenceModalOpen] = useState<boolean>(false);
   const [activeEvidenceDetail, setActiveEvidenceDetail] = useState<EvidenceLayerItem | null>(null);
+
+  // Dossier Archive & Search
+  const [isDossierSearchOpen, setIsDossierSearchOpen] = useState<boolean>(false);
+  const [dossiers, setDossiers] = useState<InspectionDossier[]>(PREVIOUS_INSPECTION_DOSSIERS);
+  const [activeDossierId, setActiveDossierId] = useState<string | null>('DOS-2026-0115-BLR');
+
+  const openDossierSearch = useCallback(() => {
+    setIsDossierSearchOpen(true);
+  }, []);
+
+  const loadDossier = useCallback((dossier: InspectionDossier) => {
+    setSelectedMissionId(dossier.missionId);
+    setActiveDossierId(dossier.id);
+    setFindingTitle(dossier.name);
+    setCustomInsight(dossier.findings);
+    if (dossier.coordinates) {
+      setCustomMissionData({
+        name: dossier.name,
+        lat: dossier.coordinates.lat,
+        lon: dossier.coordinates.lon,
+        utmZone: dossier.utmZone || 'EPSG:32643 (UTM Zone 43N)',
+        areaAoi: dossier.areaAoi || '12.64 km²',
+      });
+    }
+    if (dossier.modality === 'sar') setActiveLens('SAR');
+    else if (dossier.modality === 'multispectral') setActiveLens('EVIDENCE');
+    else if (dossier.modality === 'optical') setActiveLens('True Color');
+    else setActiveLens('CHANGE');
+    setIsDossierSearchOpen(false);
+  }, []);
 
   // Workstation Mode & Location
   const [workstationMode, setWorkstationMode] = useState<WorkstationMode>('SCIENTIFIC BENCHMARK');
@@ -1772,6 +1833,15 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         activeEvidenceDetail,
         setActiveEvidenceDetail,
 
+        isDossierSearchOpen,
+        setIsDossierSearchOpen,
+        openDossierSearch,
+        dossiers,
+        setDossiers,
+        activeDossierId,
+        setActiveDossierId,
+        loadDossier,
+
         workstationMode,
         setWorkstationMode,
         updateMissionLocation,
@@ -1789,6 +1859,10 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         totalAreaM2,
         synthesizedInsight,
         customInsight,
+        setFindingTitle,
+        setCustomInsight,
+        setCustomAreaHa,
+        setCustomAreaM2,
         customAreaHa,
         customAreaM2,
       }}

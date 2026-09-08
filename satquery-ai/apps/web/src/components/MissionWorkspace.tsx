@@ -10,6 +10,7 @@ import { EvidenceDrawer } from './drawers/EvidenceDrawer';
 import { TraceDrawer } from './drawers/TraceDrawer';
 import { LayersDrawer } from './drawers/LayersDrawer';
 import { ChatAssistantDrawer } from './drawers/ChatAssistantDrawer';
+import { AnalysesDrawer } from './drawers/AnalysesDrawer';
 import { ReportExportModal } from './ReportExportModal';
 import { SettingsModal } from './modals/SettingsModal';
 import { LiveSatelliteModal } from './modals/LiveSatelliteModal';
@@ -17,6 +18,7 @@ import { BenchmarkModal } from './modals/BenchmarkModal';
 import { EarthExplorerModal } from './modals/EarthExplorerModal';
 import { EvidenceModal } from './modals/EvidenceModal';
 import { TraceModal } from './modals/TraceModal';
+import { DossierSearchModal } from './modals/DossierSearchModal';
 import { ObservationPicker } from './ObservationPicker';
 import { WorkspaceProvider, useWorkspace } from '../context/WorkspaceContext';
 
@@ -91,6 +93,11 @@ function MissionWorkspaceInner({
           isOpen={ws.activeDrawer === 'chat'}
           onClose={() => ws.closeDrawer()}
         />
+
+        <AnalysesDrawer
+          isOpen={ws.activeDrawer === 'analysis'}
+          onClose={() => ws.closeDrawer()}
+        />
       </div>
 
       {/* 3. Bottom Persistent Command Surface & Execution Trace */}
@@ -145,6 +152,12 @@ function MissionWorkspaceInner({
       <EvidenceModal />
 
       <TraceModal />
+
+      <DossierSearchModal
+        isOpen={ws.isDossierSearchOpen}
+        onClose={() => ws.setIsDossierSearchOpen(false)}
+        onSelectDossier={ws.loadDossier}
+      />
 
       {/* STAC Observation Picker */}
       <ObservationPicker />

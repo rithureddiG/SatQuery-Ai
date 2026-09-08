@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Target,
   ChevronDown,
@@ -9,6 +9,13 @@ import {
   FileText,
   ShieldCheck,
   Sparkles,
+  Search,
+  FolderArchive,
+  Calendar,
+  X,
+  Compass,
+  Layers,
+  Settings,
 } from 'lucide-react';
 import { useWorkspace, Scenario, CANONICAL_MISSIONS } from '../../context/WorkspaceContext';
 
@@ -41,6 +48,27 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   }, []);
 
   const currentMission = ws.currentMission;
+  const [filterQuery, setFilterQuery] = useState<string>('');
+  const [filterYear, setFilterYear] = useState<string>('ALL');
+
+  // Filtered missions for quick selection
+  const filteredMissions = useMemo(() => {
+    return CANONICAL_MISSIONS.filter((m) => {
+      if (filterYear !== 'ALL') {
+        const hasYear = m.dateT1?.startsWith(filterYear) || m.dateT2?.startsWith(filterYear);
+        if (!hasYear) return false;
+      }
+      if (filterQuery.trim()) {
+        const q = filterQuery.toLowerCase().trim();
+        const matchesName = m.name.toLowerCase().includes(q);
+        const matchesLoc = m.location.toLowerCase().includes(q);
+        const matchesTag = m.tag.toLowerCase().includes(q);
+        const matchesDate = (m.dateT1 && m.dateT1.includes(q)) || (m.dateT2 && m.dateT2.includes(q));
+        if (!matchesName && !matchesLoc && !matchesTag && !matchesDate) return false;
+      }
+      return true;
+    });
+  }, [filterQuery, filterYear]);
 
   return (
     <header className="h-11 shrink-0 bg-[#0A0A0A] border-b border-[#222222] px-5 flex items-center justify-between z-30 select-none text-white">
@@ -59,7 +87,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
         </div>
       </div>
 
-      {/* Center: Mission Selector (Restrained Typography, No Heavy Pill) */}
+      {/* Center: Mission Selector with Search Filter */}
       <div className="relative" ref={missionRef}>
         <button
           onClick={() => setIsMissionDropdownOpen((prev) => !prev)}
@@ -75,51 +103,163 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
         </button>
 
         {isMissionDropdownOpen && (
-          <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1.5 w-80 bg-[#141414] border border-[#2A2A2A] rounded-lg shadow-2xl py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150 font-mono text-xs">
-            <div className="px-3 py-1.5 text-[9px] font-bold tracking-widest text-neutral-500 uppercase border-b border-[#222222]">
-              CANONICAL MISSIONS SUITE
-            </div>
-            <div className="p-1 space-y-0.5">
-              {CANONICAL_MISSIONS.map((m) => {
-                const isSelected = ws.selectedMissionId === m.id;
-                return (
+          <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1.5 w-88 bg-[#141414] border border-[#2A2A2A] rounded-xl shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-150 font-mono text-xs">
+            {/* Header & Search Bar */}
+            <div className="p-2.5 border-b border-[#222222] bg-[#111111] space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[9px] font-bold tracking-widest text-neutral-400 uppercase">
+                  FILTER DOSSIERS & MISSIONS
+                </span>
+                <span className="text-[9px] text-neutral-500">
+                  {filteredMissions.length} matched
+                </span>
+              </div>
+              <div className="relative">
+                <Search className="w-3 h-3 text-neutral-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Filter by date or name (e.g. 2026, Bangalore)..."
+                  value={filterQuery}
+                  onChange={(e) => setFilterQuery(e.target.value)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-full bg-[#1A1A1A] border border-[#2E2E2E] rounded-md pl-7 pr-6 py-1.5 text-xs text-neutral-200 placeholder:text-neutral-500 focus:outline-none focus:border-neutral-500 font-sans"
+                />
+                {filterQuery && (
                   <button
-                    key={m.id}
-                    onClick={() => {
-                      ws.selectMission(m.id);
-                      setIsMissionDropdownOpen(false);
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFilterQuery('');
                     }}
-                    className={`w-full text-left p-2 rounded text-xs transition-all flex items-start justify-between ${
-                      isSelected
-                        ? 'bg-neutral-800 text-white font-bold'
-                        : 'text-neutral-400 hover:bg-neutral-900 hover:text-neutral-200'
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-200"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-1 pt-0.5">
+                <span className="text-[9px] text-neutral-500 mr-1">Date:</span>
+                {(['ALL', '2026', '2025', '2024'] as const).map((yr) => (
+                  <button
+                    key={yr}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFilterYear(yr);
+                    }}
+                    className={`px-2 py-0.5 rounded text-[10px] font-mono transition-colors ${
+                      filterYear === yr
+                        ? 'bg-neutral-200 text-black font-bold'
+                        : 'bg-[#1F1F1F] text-neutral-400 hover:text-white'
                     }`}
                   >
-                    <div>
-                      <div className="text-[10px] text-neutral-500 font-bold">{m.tag}</div>
-                      <div className="font-sans font-medium text-neutral-200 text-xs mt-0.5">{m.name}</div>
-                      <div className="text-[10px] text-neutral-500 mt-0.5">{m.location}</div>
-                    </div>
-                    {isSelected && <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-1" />}
+                    {yr}
                   </button>
-                );
-              })}
+                ))}
+              </div>
             </div>
+
+            {/* Missions List */}
+            <div className="p-1 max-h-64 overflow-y-auto space-y-0.5">
+              {filteredMissions.length === 0 ? (
+                <div className="p-4 text-center text-neutral-500 text-[11px]">
+                  No matching dossiers found.
+                </div>
+              ) : (
+                filteredMissions.map((m) => {
+                  const isSelected = ws.selectedMissionId === m.id;
+                  return (
+                    <button
+                      key={m.id}
+                      onClick={() => {
+                        ws.selectMission(m.id);
+                        setIsMissionDropdownOpen(false);
+                      }}
+                      className={`w-full text-left p-2 rounded-lg text-xs transition-all flex items-start justify-between ${
+                        isSelected
+                          ? 'bg-neutral-800 text-white font-bold'
+                          : 'text-neutral-400 hover:bg-neutral-900 hover:text-neutral-200'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] text-neutral-400 font-bold">{m.tag}</span>
+                          {(m.dateT1 || m.dateT2) && (
+                            <span className="text-[9px] text-emerald-400 bg-emerald-950/60 px-1 py-0.2 rounded border border-emerald-800/60">
+                              {m.dateT2 || m.dateT1}
+                            </span>
+                          )}
+                        </div>
+                        <div className="font-sans font-medium text-neutral-200 text-xs mt-0.5">{m.name}</div>
+                        <div className="text-[10px] text-neutral-500 mt-0.5">{m.location}</div>
+                      </div>
+                      {isSelected && <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-1" />}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Bottom Archive Link */}
+            <button
+              onClick={() => {
+                setIsMissionDropdownOpen(false);
+                ws.toggleDrawer('analysis');
+              }}
+              className="w-full text-left p-2.5 border-t border-[#222222] bg-[#111111] text-[11px] font-mono text-emerald-400 hover:bg-[#1A1A1A] hover:text-emerald-300 transition-colors flex items-center justify-between"
+            >
+              <span className="flex items-center gap-1.5">
+                <FolderArchive className="w-3.5 h-3.5" />
+                <span>Open Analyses Archive...</span>
+              </span>
+              <span className="text-[9px] text-neutral-500">Search & Restore Saved Analyses</span>
+            </button>
           </div>
         )}
       </div>
 
       {/* Right: Subordinate Navigation & Quiet Status Indicator */}
-      <div className="flex items-center gap-3">
-        {/* Subtle Navigation Actions */}
-        <div className="flex items-center gap-1 text-[11px] font-mono text-neutral-400">
+      <div className="flex items-center gap-2.5">
+        {/* Clean Primary Product Navigation */}
+        <nav className="flex items-center gap-1 text-[11px] font-mono text-neutral-400">
           <button
-            onClick={() => ws.toggleDrawer('evidence')}
-            className="px-2 py-1 rounded hover:text-white hover:bg-neutral-900 transition-colors flex items-center gap-1"
-            title="Inspect Grounded Multi-modal Evidence"
+            onClick={() => {
+              ws.closeDrawer();
+              ws.setActiveTab('workspace');
+            }}
+            className={`px-2 py-1 rounded transition-colors flex items-center gap-1 ${
+              ws.activeDrawer === null && ws.activeTab === 'workspace'
+                ? 'text-white bg-neutral-900 font-bold'
+                : 'hover:text-white hover:bg-neutral-900'
+            }`}
+            title="Return to Main Workspace View"
           >
-            <ShieldCheck className="w-3 h-3 text-neutral-400" />
-            <span>Evidence</span>
+            <Compass className="w-3 h-3 text-neutral-400" />
+            <span>Workspace</span>
+          </button>
+
+          <button
+            onClick={() => ws.toggleDrawer('scene')}
+            className={`px-2 py-1 rounded transition-colors flex items-center gap-1 ${
+              ws.activeDrawer === 'scene'
+                ? 'text-white bg-neutral-900 font-bold'
+                : 'hover:text-white hover:bg-neutral-900'
+            }`}
+            title="Imagery & Observations Catalog"
+          >
+            <Layers className="w-3 h-3 text-neutral-400" />
+            <span>Imagery</span>
+          </button>
+
+          <button
+            onClick={() => ws.toggleDrawer('analysis')}
+            className={`px-2 py-1 rounded transition-colors flex items-center gap-1 ${
+              ws.activeDrawer === 'analysis'
+                ? 'text-emerald-400 bg-neutral-900 font-bold'
+                : 'hover:text-white hover:bg-neutral-900'
+            }`}
+            title="Saved & Recent Analyses"
+          >
+            <FolderArchive className="w-3 h-3 text-emerald-400" />
+            <span className="text-neutral-200">Analyses</span>
           </button>
 
           <button
@@ -132,17 +272,19 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           </button>
 
           <button
-            onClick={() => ws.setIsEarthExplorerOpen(true)}
-            className="px-2 py-1 rounded hover:text-white hover:bg-neutral-900 transition-colors flex items-center gap-1"
-            title="STAC Catalog & Global Coordinate Query"
+            onClick={() => {
+              if (propOnOpenSettings) propOnOpenSettings();
+              else ws.setIsSettingsOpen(true);
+            }}
+            className="p-1 rounded hover:text-white hover:bg-neutral-900 transition-colors text-neutral-400"
+            title="System Settings & Node Clusters"
           >
-            <Globe className="w-3 h-3 text-neutral-400" />
-            <span>Earth Explorer</span>
+            <Settings className="w-3.5 h-3.5" />
           </button>
 
           <button
             onClick={() => ws.toggleDrawer('chat')}
-            className={`px-2.5 py-1 rounded transition-colors flex items-center gap-1.5 font-medium ${
+            className={`px-2 py-1 rounded transition-colors flex items-center gap-1 font-medium ml-0.5 ${
               ws.activeDrawer === 'chat'
                 ? 'bg-satblue-500 text-white shadow-sm'
                 : 'bg-white/10 hover:bg-white/20 text-white'
@@ -150,9 +292,9 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
             title="Open SatQuery AI Copilot Conversation"
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-            <span>AI Copilot</span>
+            <span className="hidden sm:inline">Copilot</span>
           </button>
-        </div>
+        </nav>
 
         <span className="w-px h-3 bg-neutral-800" />
 

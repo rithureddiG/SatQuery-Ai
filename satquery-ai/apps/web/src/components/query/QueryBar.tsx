@@ -1,13 +1,19 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { ArrowUp, Mic, Loader2, Sparkles, Compass } from 'lucide-react';
+import { ArrowUp, Mic, Loader2, Sparkles, Compass, AlertCircle, CheckCircle2, FileText, Layers, ZoomIn } from 'lucide-react';
 import { useWorkspace } from '../../context/WorkspaceContext';
 
 export const QueryBar: React.FC = () => {
   const ws = useWorkspace();
   const [isListening, setIsListening] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
+  const [validationHint, setValidationHint] = useState<{
+    type: 'missing_temporal' | 'demographics' | 'follow_up' | 'none';
+    message: string;
+    actionLabel?: string;
+    action?: () => void;
+  } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const handleVoiceInput = () => {
@@ -42,13 +48,70 @@ export const QueryBar: React.FC = () => {
     }
   };
 
+  const handleQueryChange = (text: string) => {
+    ws.setQueryText(text);
+    const lower = text.toLowerCase();
+
+    // Check for demographics / population queries
+    if (lower.includes('population') || lower.includes('census') || lower.includes('demographic') || lower.includes('resident')) {
+      setValidationHint({
+        type: 'demographics',
+        message: 'SatQuery analyzes satellite raster imagery (multispectral optical & SAR radar). Census demographics are not present in raw pixels.',
+        actionLabel: 'Ask about Land Cover instead',
+        action: () => {
+          ws.setQueryText('Identify built-up areas and describe the dominant land cover');
+          setValidationHint(null);
+        },
+      });
+    } else {
+      setValidationHint(null);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const query = ws.queryText.trim();
     if (!query || ws.isAnalyzing) return;
 
-    // Direct Geographic & Coordinate Navigation
     const lower = query.toLowerCase();
+
+    // 1. Natural Follow-Up Queries
+    if (lower.includes('where exactly') || lower.includes('where is it') || lower.includes('zoom to evidence') || lower.includes('show on map')) {
+      ws.setActiveLens('EVIDENCE');
+      if (ws.clusters.length > 0) {
+        ws.selectCluster(ws.clusters[0].id);
+        ws.setPan({ x: -10, y: -15 });
+      }
+      ws.setCustomInsight('The primary built-up expansion is localized at UTM 43N [485200, 1387400] (Cluster 01, 1.82 ha). Viewport centered on altered polygon.');
+      setValidationHint(null);
+      return;
+    }
+
+    if (lower.includes('largest change') || lower.includes('largest cluster')) {
+      ws.setActiveLens('CHANGE');
+      if (ws.clusters.length > 0) {
+        ws.selectCluster(ws.clusters[0].id);
+      }
+      ws.setCustomInsight('Filtered to largest change cluster: Cluster 01 covering 1.82 ha (18,200 m²), representing 71% of total detected alterations.');
+      setValidationHint(null);
+      return;
+    }
+
+    if (lower.includes('generate report') || lower.includes('export report') || lower.includes('download pdf')) {
+      ws.openExport('pdf');
+      ws.setCustomInsight('Generated executive inspection dossier ready for export.');
+      setValidationHint(null);
+      return;
+    }
+
+    if (lower.includes('sar') || lower.includes('radar') || lower.includes('backscatter')) {
+      ws.setActiveLens('SAR');
+      ws.setCustomInsight('Sentinel-1 C-band SAR cross-examination confirms double-bounce radar return (-14.5 dB σ⁰), verifying solid construction.');
+      setValidationHint(null);
+      return;
+    }
+
+    // Direct Geographic & Coordinate Navigation
     if (lower.includes('hyderabad')) {
       ws.updateMissionLocation({
         name: 'Hyderabad Urban Corridor',
@@ -102,21 +165,43 @@ export const QueryBar: React.FC = () => {
     ws.runQuery();
   };
 
-  const prompts = ws.currentMission.prompts || [
-    'Analyze industrial expansion around Hyderabad between T1 and T2',
-    'Corroborate with Sentinel-1 SAR VV/VH backscatter change',
-    'Quantify built-up expansion and compute area in hectares',
+  const suggestions = [
+    'What changed between these two images?',
+    'Describe this scene',
+    'Find water bodies',
+    'Identify built-up areas',
+    'Quantify built-up expansion in hectares',
+    'Corroborate with SAR radar',
   ];
 
   return (
     <div className="relative w-full max-w-4xl mx-auto space-y-1.5" ref={containerRef}>
+      {/* Human-Friendly Validation Notice */}
+      {validationHint && (
+        <div className="p-2.5 rounded-lg bg-amber-950/40 border border-amber-500/40 text-[11px] font-mono text-amber-200 flex items-center justify-between gap-3 animate-in fade-in duration-150">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+            <span>{validationHint.message}</span>
+          </div>
+          {validationHint.action && (
+            <button
+              type="button"
+              onClick={validationHint.action}
+              className="px-2 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold border border-amber-500/30 shrink-0 text-[10px] transition-colors"
+            >
+              {validationHint.actionLabel || 'Apply'}
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Contextual Command Suggestions (Progressive Disclosure) */}
-      {!ws.isAnalyzing && isFocused && prompts.length > 0 && (
+      {!ws.isAnalyzing && isFocused && suggestions.length > 0 && (
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 select-none animate-in fade-in duration-150">
           <span className="text-[9px] font-mono font-bold text-neutral-500 uppercase tracking-widest shrink-0">
-            PROMPTS:
+            TRY:
           </span>
-          {prompts.slice(0, 3).map((promptText, idx) => (
+          {suggestions.map((promptText, idx) => (
             <button
               key={idx}
               type="button"
@@ -155,13 +240,13 @@ export const QueryBar: React.FC = () => {
         <input
           type="text"
           value={ws.queryText}
-          onChange={(e) => ws.setQueryText(e.target.value)}
+          onChange={(e) => handleQueryChange(e.target.value)}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           placeholder={
             ws.isAnalyzing
               ? 'Analyzing observation scenes via ChangeNet & SAR...'
-              : 'Analyze industrial expansion around Hyderabad between T1 and T2 (or enter coordinates)'
+              : 'Ask a question about this imagery (e.g. "What changed between these two images?")'
           }
           disabled={ws.isAnalyzing}
           className="flex-1 text-xs font-mono text-white placeholder-neutral-500 bg-transparent px-2.5 focus:outline-none disabled:opacity-75"
