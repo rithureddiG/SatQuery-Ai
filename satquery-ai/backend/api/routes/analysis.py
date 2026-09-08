@@ -147,3 +147,14 @@ def get_analysis_job(job_id: str, db: Session = Depends(get_db)):
         "confidence": job.confidence,
         "created_at": job.created_at,
     }
+
+
+@router.post("/{job_id}/replay")
+def replay_analysis_endpoint(job_id: str):
+    """Replay historical analysis and verify exact scientific reproducibility."""
+    try:
+        from scripts.reproduce_analysis import reproduce_analysis
+        report = reproduce_analysis(job_id)
+        return report
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Replay execution failed: {str(e)}")

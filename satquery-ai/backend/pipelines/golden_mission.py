@@ -208,6 +208,13 @@ def run_complete_compound_golden_mission(
         mask_arr = (diff > 25.0).astype(np.uint8)
         change_percent = round(float(np.mean(mask_arr)) * 100.0, 2)
 
+    if mask_arr.shape != (r_t1.height, r_t1.width):
+        if cv2 is not None:
+            mask_arr = cv2.resize(mask_arr, (r_t1.width, r_t1.height), interpolation=cv2.INTER_NEAREST)
+        elif PILImage is not None:
+            mask_arr = np.asarray(PILImage.fromarray(mask_arr).resize((r_t1.width, r_t1.height), resample=0), dtype=np.uint8)
+        change_percent = round(float(np.mean(mask_arr)) * 100.0, 2)
+
     steps.append(ProvenanceStep(
         step_number=6, tool="siamese_changenet",
         description=f"Generated 2D change probability tensor with Siamese ChangeNet ({change_percent}% surface change detected).",
@@ -358,8 +365,9 @@ def run_complete_compound_golden_mission(
     # -------------------------------------------------------------
     t9 = time.perf_counter()
     fusion_engine = SpatialFusionEngine()
-    # High backscatter mask for urban built-up in SAR (> -12 dB or top quartile backscatter)
-    sar_threshold = max(-14.0, float(np.mean(sar_filtered) + 0.3 * np.std(sar_filtered)))
+    sar_mean = float(np.mean(sar_filtered))
+    sar_std = float(np.std(sar_filtered))
+    sar_threshold = sar_mean + 0.3 * sar_std if sar_std > 1e-4 else sar_mean
     sar_urban_mask = (sar_filtered > sar_threshold)
     opt_urban_mask = (mask_arr > 0)
 
@@ -440,12 +448,27 @@ def run_complete_compound_golden_mission(
     mean_d_ndbi = float(np.mean(d_ndbi[mask_arr > 0])) if np.sum(mask_arr > 0) > 0 else float(np.mean(d_ndbi))
     mean_d_ndvi = float(np.mean(d_ndvi[mask_arr > 0])) if np.sum(mask_arr > 0) > 0 else float(np.mean(d_ndvi))
 
+    if fusion_res.spatial_agreement_ratio >= 0.40:
+        corrob_text = (
+            f"Sentinel-1 SAR microwave backscatter independently corroborates optical findings with a "
+            f"spatial consensus agreement score of {fusion_res.spatial_agreement_ratio * 100:.1f}% (IoU: {fusion_res.iou:.2f})."
+        )
+    elif fusion_res.spatial_agreement_ratio > 0.0:
+        corrob_text = (
+            f"Sentinel-1 SAR microwave backscatter shows partial corroboration ({fusion_res.spatial_agreement_ratio * 100:.1f}%, "
+            f"IoU: {fusion_res.iou:.2f}) with optical change detections."
+        )
+    else:
+        corrob_text = (
+            f"Sentinel-1 SAR microwave backscatter shows low spatial consensus ({fusion_res.spatial_agreement_ratio * 100:.1f}%, "
+            f"IoU: {fusion_res.iou:.2f}) with optical findings, indicating potential surface discordance."
+        )
+
     synthesized_answer = (
         f"Bi-temporal ChangeNet analysis confirms that built-up urban area increased by {change_percent}% "
         f"across {total_area_m2:,.1f} m² ({total_area_ha} ha / {total_area_km2} km²) divided into {len(features)} cluster(s). "
         f"Spectral index analysis (ΔNDBI: {mean_d_ndbi:+.2f}, ΔNDVI: {mean_d_ndvi:+.2f}) indicates {semantic_res.dominant_transition.value.replace('_', ' ')}. "
-        f"Sentinel-1 SAR microwave backscatter independently corroborates optical findings with a spatial consensus agreement "
-        f"score of {fusion_res.spatial_agreement_ratio * 100:.1f}% (IoU: {fusion_res.iou:.2f})."
+        f"{corrob_text}"
     )
 
     steps.append(ProvenanceStep(
