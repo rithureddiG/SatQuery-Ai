@@ -296,6 +296,7 @@ export interface AgentQueryResponse {
     pdf: string;
     geojson: string;
     csv: string;
+    json?: string;
   };
   total_duration_ms: number;
 }

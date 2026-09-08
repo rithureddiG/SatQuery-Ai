@@ -10,5 +10,9 @@
     "build": "npm run build --workspace=satquery-web",
     "start": "npm run start --workspace=satquery-web",
     "lint": "npm run lint --workspace=satquery-web"
+  },
+  "dependencies": {
+    "@types/leaflet": "^1.9.22",
+    "leaflet": "^1.9.4"
   }
 }

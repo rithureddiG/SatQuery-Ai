@@ -44,10 +44,12 @@ export const SearchEarth: React.FC<SearchEarthProps> = ({
   compact = false,
 }) => {
   const ws = useWorkspaceSafe();
-  const [query, setQuery] = useState<string>('Hyderabad, India');
+  const [location, setLocation] = useState<string>('Hyderabad, India');
+  const [results, setResults] = useState<SatelliteObservationItem[]>(ws?.stacObservations || []);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [showPresets, setShowPresets] = useState<boolean>(false);
+  const [showResultsList, setShowResultsList] = useState<boolean>(false);
   const [lastQueriedLocation, setLastQueriedLocation] = useState<SearchEarthLocation | null>(
     ws?.searchLocationData || {
       name: 'Hyderabad Urban Corridor',
@@ -65,9 +67,16 @@ export const SearchEarth: React.FC<SearchEarthProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Sync with workspace stac observations if available and local results are empty
+  useEffect(() => {
+    if (ws?.stacObservations && ws.stacObservations.length > 0 && results.length === 0) {
+      setResults(ws.stacObservations);
+    }
+  }, [ws?.stacObservations, results.length]);
+
   // Real-time Coordinate Detection Parser
   const parsedCoords = React.useMemo(() => {
-    const trimmed = query.trim();
+    const trimmed = location.trim();
     // Match decimal formats: "17.385, 78.4867" or "17.385 -78.4867" or "17.3850 N, 78.4867 E"
     const match = trimmed.match(
       /^(-?\d+(?:\.\d+)?)\s*([NSns])?[,\s]+(-?\d+(?:\.\d+)?)\s*([EWew])?$/
@@ -94,7 +103,7 @@ export const SearchEarth: React.FC<SearchEarthProps> = ({
       }
     }
     return null;
-  }, [query]);
+  }, [location]);
 
   // Click outside to dismiss presets dropdown
   useEffect(() => {
@@ -107,23 +116,28 @@ export const SearchEarth: React.FC<SearchEarthProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleQueryStac = async (targetQuery?: string) => {
-    const q = (targetQuery !== undefined ? targetQuery : query).trim();
-    if (!q) return;
+  const handleQueryStac = async (targetLocation?: string) => {
+    const locQuery = (targetLocation !== undefined ? targetLocation : location).trim();
+    if (!locQuery) return;
 
     setIsLoading(true);
     setError(null);
     setShowPresets(false);
 
     try {
-      const res = await fetch(`/api/v1/satellite/search?q=${encodeURIComponent(q)}&maxCloud=35`);
+      const res = await fetch(`/api/v1/satellite/search?q=${encodeURIComponent(locQuery)}&maxCloud=35`);
       const data = await res.json();
 
       if (data.status === 'success') {
         const loc: SearchEarthLocation = data.location;
         const observations: SatelliteObservationItem[] = data.observations || [];
 
+        // 1. Update local state with search results
+        setResults(observations);
         setLastQueriedLocation(loc);
+        setShowResultsList(true);
+
+        // 2. Synchronize workspace context if available
         ws?.setSearchLocationData?.(loc);
         ws?.setStacObservations?.(observations);
 
@@ -189,17 +203,20 @@ export const SearchEarth: React.FC<SearchEarthProps> = ({
             ref={inputRef}
             id="search-earth-location-input"
             data-testid="search-earth-location-input"
+            data-test="search-earth-input"
+            name="location"
             type="text"
-            value={query}
+            value={location}
             onFocus={() => setShowPresets(true)}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => setLocation(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault();
                 handleQueryStac();
               }
             }}
-            placeholder="Search Earth location or enter lat, lon (e.g. Hyderabad, or 17.3850, 78.4867)..."
+            placeholder="Enter location name or coordinates (e.g., 17.3850, 78.4867 or Hyderabad)..."
+            aria-label="Location or coordinates"
             className="flex-1 bg-transparent text-xs text-[#111111] placeholder:text-[#888888] focus:outline-none font-medium truncate"
           />
 
@@ -215,13 +232,13 @@ export const SearchEarth: React.FC<SearchEarthProps> = ({
           )}
 
           {/* Clear query button */}
-          {query && (
+          {location && (
             <button
               id="search-earth-clear-btn"
               data-testid="search-earth-clear-btn"
               type="button"
               onClick={() => {
-                setQuery('');
+                setLocation('');
                 inputRef.current?.focus();
               }}
               className="p-1 rounded-md text-[#888888] hover:text-[#111111] hover:bg-[#EAEAE5] transition-colors"
@@ -237,8 +254,9 @@ export const SearchEarth: React.FC<SearchEarthProps> = ({
           <button
             id="search-earth-query-stac-btn"
             data-testid="search-earth-query-stac-btn"
+            data-test="search-earth-button"
             type="button"
-            disabled={isLoading || !query.trim()}
+            disabled={isLoading || !location.trim()}
             onClick={() => handleQueryStac()}
             className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl bg-[#111111] text-white hover:bg-[#2A2A2A] disabled:opacity-50 disabled:pointer-events-none text-xs font-semibold shadow-sm transition-all"
             title="Query STAC-compliant Earth Observation catalogue"
@@ -246,12 +264,12 @@ export const SearchEarth: React.FC<SearchEarthProps> = ({
             {isLoading ? (
               <>
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-satblue-300" />
-                <span>Querying STAC...</span>
+                <span>Searching EO Catalogue...</span>
               </>
             ) : (
               <>
                 <Satellite className="w-3.5 h-3.5 text-satblue-300" />
-                <span>Query STAC Catalogue</span>
+                <span>Search EO Catalogue</span>
               </>
             )}
           </button>
@@ -277,7 +295,7 @@ export const SearchEarth: React.FC<SearchEarthProps> = ({
             <Layers className="w-3.5 h-3.5 text-[#6F6F6A]" />
             <span className="hidden sm:inline">OBSERVATIONS</span>
             <span className="px-1.5 py-0.2 rounded text-[10px] bg-white border border-[#D5D5D0] text-[#111111]">
-              {ws?.stacObservations?.length ?? 0}
+              {results.length}
             </span>
           </button>
         </div>
@@ -334,6 +352,83 @@ export const SearchEarth: React.FC<SearchEarthProps> = ({
         </div>
       )}
 
+      {/* 4. Search Results Summary & Granules List (Local State) */}
+      {results.length > 0 && (
+        <div
+          id="search-earth-results"
+          data-testid="search-earth-results"
+          className="p-2.5 rounded-xl bg-white/95 backdrop-blur-md border border-[#E6E6E1] shadow-sm text-xs font-mono"
+        >
+          <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-[#F0EFEA]">
+            <div className="flex items-center gap-2">
+              <Database className="w-3.5 h-3.5 text-satblue-600" />
+              <span className="font-bold text-[#111111]">
+                EO CATALOGUE RESULTS:
+              </span>
+              <span
+                id="search-earth-results-count"
+                data-testid="search-earth-results-count"
+                className="px-1.5 py-0.5 rounded bg-satblue-50 text-satblue-700 font-bold border border-satblue-200"
+              >
+                {results.length} Granules Available
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setShowResultsList(!showResultsList)}
+                className="px-2 py-0.5 rounded bg-[#FAF9F7] hover:bg-[#F0EFEA] border border-[#E6E6E1] text-[#444444] text-[10px] font-semibold transition-colors"
+              >
+                {showResultsList ? 'Hide List' : 'Preview List'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (ws?.setIsObservationPickerOpen) {
+                    ws.setIsObservationPickerOpen(true);
+                  }
+                  if (onOpenPicker) onOpenPicker();
+                }}
+                className="px-2.5 py-0.5 rounded bg-[#111111] text-white hover:bg-[#2A2A2A] text-[10px] font-semibold transition-colors"
+              >
+                Open Picker
+              </button>
+            </div>
+          </div>
+
+          {/* Granule Results List */}
+          {showResultsList && (
+            <div className="mt-2 space-y-1 max-h-48 overflow-y-auto pr-1">
+              {results.slice(0, 5).map((obs) => (
+                <div
+                  key={obs.id}
+                  className="flex items-center justify-between gap-2 p-1.5 rounded-lg bg-[#FAF9F7] hover:bg-[#F4F4F0] border border-[#ECECE8] text-[11px] transition-colors"
+                >
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <Satellite className="w-3 h-3 text-[#6F6F6A] shrink-0" />
+                    <span className="font-bold text-[#111111] truncate">{obs.title}</span>
+                    <span className="text-[10px] text-[#6F6F6A] shrink-0">({obs.sensor})</span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0 text-[10px] text-[#555555]">
+                    <span>{obs.dateFormatted}</span>
+                    {obs.modality === 'optical' ? (
+                      <span className="text-emerald-700 font-semibold">{obs.cloudCoverPct}% cloud</span>
+                    ) : (
+                      <span className="text-satblue-700 font-semibold">SAR (All-weather)</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {results.length > 5 && (
+                <p className="text-[10px] text-[#888888] text-center pt-1">
+                  +{results.length - 5} more observations in Observation Picker
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Presets Dropdown Panel (when input focused) */}
       {showPresets && (
         <div
@@ -355,7 +450,7 @@ export const SearchEarth: React.FC<SearchEarthProps> = ({
                 key={target.name}
                 type="button"
                 onClick={() => {
-                  setQuery(target.query);
+                  setLocation(target.query);
                   handleQueryStac(target.query);
                 }}
                 className="flex flex-col text-left p-2 rounded-xl bg-[#FAF9F7] hover:bg-[#F0EFEA] border border-[#E6E6E1] hover:border-[#CCCCCC] transition-all group"

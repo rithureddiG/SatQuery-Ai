@@ -1,8 +1,6 @@
 'use client';
 
 import React from 'react';
-import { Calendar } from 'lucide-react';
-
 import { TemporalViewMode } from '../../context/WorkspaceContext';
 
 export type { TemporalViewMode };
@@ -21,84 +19,81 @@ export const TemporalController: React.FC<TemporalControllerProps> = ({
   onSliderChange,
   temporalMode,
   onSelectTemporalMode,
-  dateT1 = 'Mar 14, 2024',
-  dateT2 = 'Mar 19, 2026',
+  dateT1 = '14 MAR 2024',
+  dateT2 = '19 MAR 2026',
 }) => {
   return (
-    <div className="h-14 shrink-0 bg-white border-t border-[#E8E8E5] px-5 flex items-center justify-between gap-6 select-none z-10">
-      {/* Left: Temporal Timeline Slider */}
-      <div className="flex-1 flex items-center gap-4">
-        {/* Calendar Icon */}
-        <div className="w-8 h-8 rounded-lg bg-[#F8F8F6] border border-[#E8E8E5] flex items-center justify-center text-[#555555]">
-          <Calendar className="w-4 h-4" />
-        </div>
+    <div className="h-10 shrink-0 bg-[#0A0A0A] border-t border-[#202020] px-5 flex items-center justify-between gap-6 select-none z-10 text-neutral-400 font-mono text-xs">
+      {/* Precision Scientific Temporal Scrubber */}
+      <div className="flex-1 flex items-center gap-3">
+        {/* T1 Marker */}
+        <button
+          type="button"
+          onClick={() => onSliderChange(0)}
+          className="flex items-center gap-1.5 shrink-0 px-2 py-0.5 rounded hover:bg-neutral-800 transition-colors"
+          title="View Full T1 Acquisition (100% T1)"
+        >
+          <span className="text-[10px] font-bold text-emerald-400 uppercase">T1</span>
+          <span className="text-[11px] font-bold text-neutral-200">{dateT1}</span>
+        </button>
 
-        {/* T1 Observation */}
-        <div className="flex flex-col">
-          <span className="text-xs font-semibold text-[#111111] font-mono leading-none">
-            {dateT1}
-          </span>
-          <span className="text-[10px] text-[#0284C7] font-mono font-bold mt-0.5">
-            T1
-          </span>
-        </div>
-
-        {/* The Slider Track */}
-        <div className="flex-1 relative flex items-center">
+        {/* Precision Hairline Slider Track */}
+        <div className="flex-1 relative flex items-center px-1">
           <input
             type="range"
             min="0"
             max="100"
             value={sliderPos}
             onChange={(e) => onSliderChange(Number(e.target.value))}
-            className="w-full accent-[#0A0A0A] cursor-ew-resize h-1.5 bg-[#E8E8E5] rounded-full appearance-none focus:outline-none"
+            className="w-full accent-white cursor-ew-resize h-0.5 bg-neutral-700 appearance-none focus:outline-none"
           />
         </div>
 
-        {/* T2 Observation */}
-        <div className="flex flex-col text-right">
-          <span className="text-xs font-semibold text-[#111111] font-mono leading-none">
-            {dateT2}
-          </span>
-          <span className="text-[10px] text-emerald-600 font-mono font-bold mt-0.5">
-            T2
-          </span>
-        </div>
+        {/* T2 Marker */}
+        <button
+          type="button"
+          onClick={() => onSliderChange(100)}
+          className="flex items-center gap-1.5 shrink-0 px-2 py-0.5 rounded hover:bg-neutral-800 transition-colors"
+          title="View Full T2 Acquisition (100% T2)"
+        >
+          <span className="text-[10px] font-bold text-blue-400 uppercase">T2</span>
+          <span className="text-[11px] font-bold text-neutral-200">{dateT2}</span>
+        </button>
       </div>
 
-      {/* Right: Compare Modes (Swipe | Side-by-Side | Difference) */}
-      <div className="flex items-center gap-1 bg-[#F3F3F0] p-1 rounded-xl border border-[#E8E8E5]">
+      {/* Mode Switcher: SWIPE · SIDE BY SIDE · DIFFERENCE */}
+      <div className="flex items-center gap-0.5 bg-[#141414] p-0.5 rounded border border-neutral-800 text-[10px]">
         <button
           onClick={() => onSelectTemporalMode('Swipe')}
-          className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+          className={`px-2 py-0.5 rounded transition-colors ${
             temporalMode === 'Swipe'
-              ? 'bg-[#0A0A0A] text-white shadow-sm font-semibold'
-              : 'text-[#666666] hover:text-[#111111]'
+              ? 'bg-neutral-800 text-white font-bold'
+              : 'text-neutral-500 hover:text-neutral-300'
           }`}
         >
-          Swipe
+          SWIPE
         </button>
 
         <button
           onClick={() => onSelectTemporalMode('Side by Side')}
-          className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+          className={`px-2 py-0.5 rounded transition-colors ${
             temporalMode === 'Side by Side'
-              ? 'bg-[#0A0A0A] text-white shadow-sm font-semibold'
-              : 'text-[#666666] hover:text-[#111111]'
+              ? 'bg-neutral-800 text-white font-bold'
+              : 'text-neutral-500 hover:text-neutral-300'
           }`}
         >
-          Side by Side
+          SPLIT
         </button>
 
         <button
           onClick={() => onSelectTemporalMode('Difference')}
-          className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+          className={`px-2 py-0.5 rounded transition-colors ${
             temporalMode === 'Difference'
-              ? 'bg-[#0A0A0A] text-white shadow-sm font-semibold'
-              : 'text-[#666666] hover:text-[#111111]'
+              ? 'bg-neutral-800 text-white font-bold'
+              : 'text-neutral-500 hover:text-neutral-300'
           }`}
         >
-          Difference
+          DIFF
         </button>
       </div>
     </div>

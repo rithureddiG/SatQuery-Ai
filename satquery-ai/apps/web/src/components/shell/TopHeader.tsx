@@ -5,9 +5,10 @@ import {
   Target,
   ChevronDown,
   Check,
-  Satellite,
-  Award,
   Globe,
+  FileText,
+  ShieldCheck,
+  Sparkles,
 } from 'lucide-react';
 import { useWorkspace, Scenario, CANONICAL_MISSIONS } from '../../context/WorkspaceContext';
 
@@ -42,41 +43,43 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   const currentMission = ws.currentMission;
 
   return (
-    <header className="h-14 shrink-0 bg-white border-b border-[#E6E6E1] px-6 flex items-center justify-between z-30 select-none">
-      {/* Left: Brand & Subtitle */}
-      <div className="flex items-center gap-3">
-        <div className="w-7 h-7 rounded-full bg-[#111111] flex items-center justify-center text-white shadow-sm">
-          <Target className="w-3.5 h-3.5 text-white stroke-[2.4]" />
+    <header className="h-11 shrink-0 bg-[#0A0A0A] border-b border-[#222222] px-5 flex items-center justify-between z-30 select-none text-white">
+      {/* Left: Brand & Micro Subtitle */}
+      <div className="flex items-center gap-2.5">
+        <div className="w-5 h-5 rounded bg-white flex items-center justify-center text-black">
+          <Target className="w-3.5 h-3.5 stroke-[2.4]" />
         </div>
-        <div>
-          <div className="font-sans font-bold text-xs tracking-tight text-[#111111] leading-none">
+        <div className="flex items-baseline gap-2">
+          <span className="font-mono font-bold text-xs tracking-tight text-neutral-100">
             SATQUERY AI
-          </div>
-          <div className="text-[9px] font-mono font-semibold tracking-wider text-[#888888] uppercase mt-0.5">
-            Earth Observation Intelligence
-          </div>
+          </span>
+          <span className="hidden sm:inline text-[9px] font-mono tracking-widest text-neutral-500 uppercase">
+            EARTH OBSERVATION INTELLIGENCE
+          </span>
         </div>
       </div>
 
-      {/* Center: Mission Selector */}
+      {/* Center: Mission Selector (Restrained Typography, No Heavy Pill) */}
       <div className="relative" ref={missionRef}>
         <button
           onClick={() => setIsMissionDropdownOpen((prev) => !prev)}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[#E6E6E1] bg-[#FAF9F7] hover:bg-[#F3F3F0] text-xs font-semibold text-[#111111] transition-colors"
+          className="flex items-center gap-2 text-xs text-neutral-300 hover:text-white transition-colors group py-1 px-2 rounded hover:bg-neutral-900"
         >
-          <span className="font-mono text-[10px] text-[#6F6F6A] font-bold">
+          <span className="font-mono text-[10px] text-neutral-500 font-bold uppercase tracking-wider">
             {currentMission.tag}
           </span>
-          <span>{currentMission.name}</span>
-          <ChevronDown className="w-3.5 h-3.5 text-[#6F6F6A]" />
+          <span className="font-medium text-neutral-200 group-hover:text-white transition-colors">
+            {currentMission.name}
+          </span>
+          <ChevronDown className="w-3 h-3 text-neutral-500 group-hover:text-neutral-300 transition-transform duration-150" />
         </button>
 
         {isMissionDropdownOpen && (
-          <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1.5 w-84 bg-white border border-[#E6E6E1] rounded-2xl shadow-2xl py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
-            <div className="px-3.5 py-1.5 text-[9px] font-mono font-bold tracking-wider text-[#888888] uppercase border-b border-[#F0EFEA]">
+          <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1.5 w-80 bg-[#141414] border border-[#2A2A2A] rounded-lg shadow-2xl py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150 font-mono text-xs">
+            <div className="px-3 py-1.5 text-[9px] font-bold tracking-widest text-neutral-500 uppercase border-b border-[#222222]">
               CANONICAL MISSIONS SUITE
             </div>
-            <div className="p-1.5 space-y-1">
+            <div className="p-1 space-y-0.5">
               {CANONICAL_MISSIONS.map((m) => {
                 const isSelected = ws.selectedMissionId === m.id;
                 return (
@@ -86,18 +89,18 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
                       ws.selectMission(m.id);
                       setIsMissionDropdownOpen(false);
                     }}
-                    className={`w-full text-left p-2.5 rounded-xl text-xs transition-all flex items-start justify-between ${
+                    className={`w-full text-left p-2 rounded text-xs transition-all flex items-start justify-between ${
                       isSelected
-                        ? 'bg-[#FAF9F7] text-[#111111] font-bold ring-1 ring-[#E6E6E1]'
-                        : 'text-[#444444] hover:bg-[#F7F7F5]'
+                        ? 'bg-neutral-800 text-white font-bold'
+                        : 'text-neutral-400 hover:bg-neutral-900 hover:text-neutral-200'
                     }`}
                   >
                     <div>
-                      <div className="font-mono text-[10px] text-[#6F6F6A] font-bold">{m.tag}</div>
-                      <div className="mt-0.5">{m.name}</div>
-                      <div className="text-[10px] text-[#888888] font-mono mt-0.5">{m.location}</div>
+                      <div className="text-[10px] text-neutral-500 font-bold">{m.tag}</div>
+                      <div className="font-sans font-medium text-neutral-200 text-xs mt-0.5">{m.name}</div>
+                      <div className="text-[10px] text-neutral-500 mt-0.5">{m.location}</div>
                     </div>
-                    {isSelected && <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-1" />}
+                    {isSelected && <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-1" />}
                   </button>
                 );
               })}
@@ -106,75 +109,64 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
         )}
       </div>
 
-      {/* Right: Quick Tabs (Workspace, Evidence, Reports, Live Satellite, SIH Audit) & Status Pill */}
+      {/* Right: Subordinate Navigation & Quiet Status Indicator */}
       <div className="flex items-center gap-3">
-        {/* Navigation Links */}
-        <div className="flex items-center gap-1 text-xs font-semibold text-[#6F6F6A]">
-          <button
-            onClick={() => ws.closeDrawer()}
-            className="px-2.5 py-1.5 rounded-lg hover:text-[#111111] hover:bg-[#FAF9F7] transition-colors"
-          >
-            Workspace
-          </button>
+        {/* Subtle Navigation Actions */}
+        <div className="flex items-center gap-1 text-[11px] font-mono text-neutral-400">
           <button
             onClick={() => ws.toggleDrawer('evidence')}
-            className="px-2.5 py-1.5 rounded-lg hover:text-[#111111] hover:bg-[#FAF9F7] transition-colors"
+            className="px-2 py-1 rounded hover:text-white hover:bg-neutral-900 transition-colors flex items-center gap-1"
+            title="Inspect Grounded Multi-modal Evidence"
           >
-            Evidence
+            <ShieldCheck className="w-3 h-3 text-neutral-400" />
+            <span>Evidence</span>
           </button>
+
           <button
             onClick={() => ws.openExport('pdf')}
-            className="px-2.5 py-1.5 rounded-lg hover:text-[#111111] hover:bg-[#FAF9F7] transition-colors"
+            className="px-2 py-1 rounded hover:text-white hover:bg-neutral-900 transition-colors flex items-center gap-1"
+            title="Export Mission Audit Dossier"
           >
-            Reports
+            <FileText className="w-3 h-3 text-neutral-400" />
+            <span>Reports</span>
           </button>
+
           <button
             onClick={() => ws.setIsEarthExplorerOpen(true)}
-            className="px-2.5 py-1.5 rounded-lg text-satblue-700 bg-satblue-50 hover:bg-satblue-100 hover:text-satblue-900 border border-satblue-200 transition-colors flex items-center gap-1.5 font-medium"
-            title="Search Any Location on Earth / Custom STAC Ingestion"
+            className="px-2 py-1 rounded hover:text-white hover:bg-neutral-900 transition-colors flex items-center gap-1"
+            title="STAC Catalog & Global Coordinate Query"
           >
-            <Globe className="w-3.5 h-3.5 text-satblue-600" />
+            <Globe className="w-3 h-3 text-neutral-400" />
             <span>Earth Explorer</span>
           </button>
+
           <button
-            onClick={() => ws.setIsLiveSatelliteOpen(true)}
-            className="px-2.5 py-1.5 rounded-lg text-emerald-700 bg-emerald-50 hover:bg-emerald-100 hover:text-emerald-900 border border-emerald-200 transition-colors flex items-center gap-1.5"
+            onClick={() => ws.toggleDrawer('chat')}
+            className={`px-2.5 py-1 rounded transition-colors flex items-center gap-1.5 font-medium ${
+              ws.activeDrawer === 'chat'
+                ? 'bg-satblue-500 text-white shadow-sm'
+                : 'bg-white/10 hover:bg-white/20 text-white'
+            }`}
+            title="Open SatQuery AI Copilot Conversation"
           >
-            <Satellite className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Live Satellite</span>
-          </button>
-          <button
-            onClick={() => ws.setIsBenchmarkOpen(true)}
-            className="px-2.5 py-1.5 rounded-lg text-[#111111] bg-[#FAF9F7] hover:bg-[#F0EFEA] border border-[#E6E6E1] transition-colors flex items-center gap-1.5"
-          >
-            <Award className="w-3.5 h-3.5 text-amber-500" />
-            <span>SIH Audit</span>
+            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+            <span>AI Copilot</span>
           </button>
         </div>
 
-        <span className="w-px h-4 bg-[#E6E6E1]" />
+        <span className="w-px h-3 bg-neutral-800" />
 
-        {/* Unified System State Indicator */}
-        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[#FAF9F7] border border-[#E6E6E1] text-[11px] font-mono font-medium">
+        {/* Quiet Minimal Status Indicator */}
+        <div className="flex items-center gap-1.5 text-[10px] font-mono text-neutral-400">
           {ws.systemState === 'ANALYZING' ? (
             <>
-              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-              <span className="text-amber-800 font-bold">ANALYZING</span>
-            </>
-          ) : ws.systemState === 'VERIFIED' ? (
-            <>
-              <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)]" />
-              <span className="text-emerald-800 font-bold">SIH EVIDENCE VERIFIED</span>
-            </>
-          ) : ws.systemState === 'OFFLINE' ? (
-            <>
-              <span className="w-2 h-2 rounded-full bg-zinc-400" />
-              <span className="text-zinc-600">OFFLINE</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+              <span className="text-amber-300">ANALYZING</span>
             </>
           ) : (
             <>
-              <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]" />
-              <span className="text-[#111111] font-semibold">READY</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span className="text-neutral-400">READY</span>
             </>
           )}
         </div>

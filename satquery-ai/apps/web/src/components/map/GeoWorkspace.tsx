@@ -2,15 +2,12 @@
 
 import React, { useRef } from 'react';
 import { MapToolbar, LensMode } from './MapToolbar';
-import { MapControls } from './MapControls';
 import { ScientificLeftRail } from './ScientificLeftRail';
-import { SearchEarth } from '../SearchEarth';
-import { SearchEarthInput } from './SearchEarthInput';
 import { TemporalController } from './TemporalController';
 import { MapMetadata } from './MapMetadata';
-import { RealisticSatelliteCanvas } from './RealisticSatelliteCanvas';
+import { InteractiveEarthViewer } from './InteractiveEarthViewer';
 import { FloatingFindingSurface } from '../intelligence/FloatingFindingSurface';
-import { Ruler, X, Satellite, Pentagon } from 'lucide-react';
+import { Ruler, X, Layers, Pentagon } from 'lucide-react';
 import { useWorkspace, ChangeCluster, CursorCoordinates } from '../../context/WorkspaceContext';
 
 interface GeoWorkspaceProps {
@@ -95,7 +92,7 @@ export const GeoWorkspace: React.FC<GeoWorkspaceProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-[#0A0A0A] select-none overflow-hidden relative">
+    <div className="flex-1 flex flex-col min-w-0 bg-[#080808] select-none overflow-hidden relative">
       {/* Central Satellite Map Canvas Frame */}
       <div className="flex-1 relative flex items-center justify-center overflow-hidden">
         {/* Main Map Box */}
@@ -105,7 +102,7 @@ export const GeoWorkspace: React.FC<GeoWorkspaceProps> = ({
           onMouseDown={handleMouseDown}
           onMouseUp={handleMouseUp}
           onClick={handleCanvasClick}
-          className={`relative w-full h-full bg-[#0A0A0A] overflow-hidden flex items-center justify-center ${
+          className={`relative w-full h-full bg-[#080808] overflow-hidden flex items-center justify-center ${
             ws.activeTool === 'measure' || ws.activeTool === 'measure_area'
               ? 'cursor-crosshair'
               : ws.activeTool === 'pan'
@@ -113,25 +110,22 @@ export const GeoWorkspace: React.FC<GeoWorkspaceProps> = ({
               : 'cursor-default'
           }`}
         >
-          {/* Scientific Tool & Spectral Lens Rail */}
-          <div className="absolute top-16 left-6 z-20 pointer-events-auto">
-            <ScientificLeftRail />
-          </div>
-
-          {/* Floating Top-Left Observation Launcher Badge & Search Earth Component */}
-          <div className="absolute top-4 left-6 z-30 flex items-center gap-2 pointer-events-auto">
-            <div className="flex items-center gap-1.5 p-1 rounded-xl bg-white/95 backdrop-blur-md border border-[#E6E6E1] shadow-lg">
+          {/* Top-Left: Compact Observation Tray (No Giant Catalogue Box) */}
+          <div className="absolute top-3 left-4 z-20 flex items-center gap-1.5 pointer-events-auto">
+            <div className="flex items-center gap-1 p-0.5 rounded-md bg-[#121212]/90 backdrop-blur-md border border-white/10 shadow-lg text-[11px] font-mono text-neutral-400">
               <button
                 onClick={() => ws.toggleDrawer('scene')}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono font-bold text-[#111111] hover:bg-[#FAF9F7] transition-colors"
-                title="Open Observations Drawer"
+                className="flex items-center gap-1 px-2 py-1 rounded hover:text-white hover:bg-neutral-800 transition-colors font-bold text-neutral-300"
+                title="Open Observations Catalog Drawer"
               >
-                <Satellite className="w-3.5 h-3.5 text-[#6F6F6A]" />
-                <span>OBSERVATIONS · {ws.datasets.length}</span>
+                <Layers className="w-3 h-3 text-neutral-400" />
+                <span>{ws.datasets.length} OBSERVATIONS</span>
               </button>
-              <div className="flex items-center gap-1 pl-1 border-l border-[#E6E6E1]">
+
+              <div className="flex items-center gap-0.5 pl-1 border-l border-white/10">
                 {ws.datasets.map((d, idx) => {
                   const isActive = ws.activeDatasetIndex === idx;
+                  const label = idx === 0 ? 'T1 14 MAR 2024' : idx === 1 ? 'T2 19 MAR 2026' : 'SAR 21 MAR 2026';
                   return (
                     <button
                       key={d.id}
@@ -142,38 +136,30 @@ export const GeoWorkspace: React.FC<GeoWorkspaceProps> = ({
                       }}
                       className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold transition-all ${
                         isActive
-                          ? 'bg-[#111111] text-white shadow-xs'
-                          : 'text-[#6F6F6A] hover:text-[#111111] hover:bg-[#FAF9F7]'
+                          ? 'bg-white text-black font-bold'
+                          : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800'
                       }`}
                     >
-                      {idx === 0 ? 'T1' : idx === 1 ? 'T2' : 'SAR'}
+                      {label}
                     </button>
                   );
                 })}
               </div>
             </div>
-
-            {/* Scientific Search Earth Component */}
-            <SearchEarth />
           </div>
 
-          {/* Floating Minimal Segmented View Lens Switcher */}
+          {/* Left Vertical Instrument Rail */}
+          <div className="absolute top-14 left-4 z-20 pointer-events-auto">
+            <ScientificLeftRail />
+          </div>
+
+          {/* Top Center: Minimal Segmented Spectral Lens Controller */}
           <MapToolbar
             activeLens={activeLens}
             onSelectLens={onSelectLens}
           />
 
-          {/* Floating Map Tools Rail */}
-          <MapControls
-            activeTool={ws.activeTool}
-            onSelectTool={ws.setActiveTool}
-            onZoomIn={ws.zoomIn}
-            onZoomOut={ws.zoomOut}
-            onResetZoom={ws.resetZoom}
-            isMeasuring={ws.activeTool === 'measure'}
-          />
-
-          {/* Floating Spatial Finding Surface (Emerges on lower-right) */}
+          {/* Floating Spatial Finding Readout (Right Side) */}
           <FloatingFindingSurface onInspectEvidence={() => ws.toggleDrawer('evidence')} />
 
           {/* Geodetic Map Reference Grid */}
@@ -181,19 +167,9 @@ export const GeoWorkspace: React.FC<GeoWorkspaceProps> = ({
             <div className="absolute inset-0 map-cross-grid pointer-events-none opacity-20 z-10" />
           )}
 
-          {/* Satellite Scaled Image Container */}
-          <div
-            style={{
-              transform: `scale(${ws.zoom}) translate(${ws.pan.x}px, ${ws.pan.y}px)`,
-              transformOrigin: 'center center',
-              transition: isDraggingRef.current
-                ? 'none'
-                : 'transform 180ms cubic-bezier(0.16, 1, 0.3, 1)',
-            }}
-            className="relative w-full h-full flex items-center justify-center"
-          >
-            {/* Real Earth Observation Scene Canvas */}
-            <RealisticSatelliteCanvas
+          {/* Real Interactive Earth Observation Satellite Viewer */}
+          <div className="absolute inset-0 w-full h-full z-0">
+            <InteractiveEarthViewer
               activeLens={activeLens}
               activeDatasetIndex={ws.activeDatasetIndex}
               temporalMode={ws.temporalMode}
@@ -204,62 +180,57 @@ export const GeoWorkspace: React.FC<GeoWorkspaceProps> = ({
               onSelectCluster={onSelectRegion}
               dateT1={dateT1}
               dateT2={dateT2}
-              measureA={ws.measureA}
-              activeMeasurement={ws.activeMeasurement}
-              polygonMeasurement={ws.polygonMeasurement}
-              cursorCoords={ws.cursorCoords}
-              activeTool={ws.activeTool}
             />
           </div>
 
-          {/* Floating Distance Ruler Callout */}
+          {/* Precision Distance Ruler Callout */}
           {ws.activeMeasurement && (
-            <div className="absolute bottom-16 left-1/2 -translate-x-1/2 bg-[#0A0A0A]/90 backdrop-blur-md text-white px-4 py-2 rounded-full shadow-floating z-30 flex items-center gap-3 border border-white/20 text-xs font-mono">
-              <Ruler className="w-4 h-4 text-emerald-400" />
+            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 bg-[#121212]/95 backdrop-blur-md text-white px-3 py-1.5 rounded-md shadow-xl z-30 flex items-center gap-2.5 border border-white/10 text-xs font-mono">
+              <Ruler className="w-3.5 h-3.5 text-emerald-400" />
               <span>
-                Geodesic Distance:{' '}
+                DIST:{' '}
                 <strong className="text-white">
                   {ws.activeMeasurement.distM.toLocaleString()} m
                 </strong>{' '}
                 ({ws.activeMeasurement.distKm} km)
               </span>
-              <span className="text-white/40">|</span>
-              <span className="text-white/70">Bearing: {ws.activeMeasurement.bearing}°</span>
+              <span className="text-neutral-600">·</span>
+              <span className="text-neutral-400">BEARING: {ws.activeMeasurement.bearing}°</span>
               <button
                 onClick={() => ws.resetMeasurement()}
-                className="text-white/60 hover:text-white ml-1"
-                title="Clear Measurement (ESC)"
+                className="text-neutral-400 hover:text-white ml-1"
+                title="Clear Measurement"
               >
-                <X className="w-3.5 h-3.5" />
+                <X className="w-3 h-3" />
               </button>
             </div>
           )}
 
-          {/* Floating Polygon Area Callout */}
+          {/* Precision Polygon Area Callout */}
           {ws.polygonMeasurement && ws.polygonMeasurement.points.length > 0 && (
-            <div className="absolute bottom-16 left-1/2 -translate-x-1/2 bg-[#0A0A0A]/90 backdrop-blur-md text-white px-4 py-2 rounded-full shadow-floating z-30 flex items-center gap-3 border border-emerald-500/40 text-xs font-mono">
-              <Pentagon className="w-4 h-4 text-emerald-400" />
+            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 bg-[#121212]/95 backdrop-blur-md text-white px-3 py-1.5 rounded-md shadow-xl z-30 flex items-center gap-2.5 border border-white/10 text-xs font-mono">
+              <Pentagon className="w-3.5 h-3.5 text-emerald-400" />
               <span>
-                Polygon Vertices: <strong className="text-white">{ws.polygonMeasurement.points.length}</strong>
+                VERTICES: <strong className="text-white">{ws.polygonMeasurement.points.length}</strong>
               </span>
               {ws.polygonMeasurement.points.length >= 3 ? (
                 <>
-                  <span className="text-white/40">|</span>
+                  <span className="text-neutral-600">·</span>
                   <span>
-                    Area: <strong className="text-emerald-400">{ws.polygonMeasurement.areaHa} ha</strong> ({ws.polygonMeasurement.areaM2.toLocaleString()} m²)
+                    AREA: <strong className="text-emerald-400">{ws.polygonMeasurement.areaHa} ha</strong> ({ws.polygonMeasurement.areaM2.toLocaleString()} m²)
                   </span>
-                  <span className="text-white/40">|</span>
-                  <span className="text-white/70">Perimeter: {ws.polygonMeasurement.perimeterM.toLocaleString()} m</span>
+                  <span className="text-neutral-600">·</span>
+                  <span className="text-neutral-400">PERIMETER: {ws.polygonMeasurement.perimeterM.toLocaleString()} m</span>
                 </>
               ) : (
                 <>
-                  <span className="text-white/40">|</span>
-                  <span className="text-amber-300">Click canvas to place at least 3 vertices</span>
+                  <span className="text-neutral-600">·</span>
+                  <span className="text-amber-400">Place ≥3 vertices</span>
                 </>
               )}
               <button
                 onClick={() => ws.clearPolygonMeasurement()}
-                className="text-white/60 hover:text-white ml-1 bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded text-[10px]"
+                className="text-neutral-400 hover:text-white ml-1 px-1.5 py-0.5 rounded bg-neutral-800 text-[10px]"
                 title="Clear Polygon"
               >
                 Clear
@@ -267,12 +238,12 @@ export const GeoWorkspace: React.FC<GeoWorkspaceProps> = ({
             </div>
           )}
 
-          {/* Map Metadata Scale & Coordinates Strip */}
+          {/* Map Metadata Status Strip */}
           <MapMetadata coordinates={ws.cursorCoords} />
         </div>
       </div>
 
-      {/* Temporal Comparison Controller Bar Directly Underneath Canvas */}
+      {/* Precision Scientific Temporal Controller Bar */}
       <TemporalController
         sliderPos={ws.sliderPos}
         onSliderChange={ws.setSliderPos}

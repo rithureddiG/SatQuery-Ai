@@ -63,12 +63,26 @@ export async function inspectImageFile(file: File, aoiId?: string): Promise<Imag
 export async function submitAgentQuery(
   query: string,
   imageIds: string[],
-  aoiId?: string
+  aoiId?: string,
+  context?: {
+    lat?: number;
+    lon?: number;
+    location_name?: string;
+    utm_zone?: string;
+  }
 ): Promise<AgentQueryResponse> {
   const res = await fetch(`${API_BASE}/api/v1/query`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query, image_ids: imageIds, aoi_id: aoiId }),
+    body: JSON.stringify({
+      query,
+      image_ids: imageIds,
+      aoi_id: aoiId,
+      lat: context?.lat,
+      lon: context?.lon,
+      location_name: context?.location_name,
+      utm_zone: context?.utm_zone,
+    }),
   });
 
   if (!res.ok) {

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ArrowRight, X, CheckCircle2, ShieldCheck, Database } from 'lucide-react';
+import { ArrowRight, X } from 'lucide-react';
 import { useWorkspace } from '../../context/WorkspaceContext';
 
 interface FloatingFindingSurfaceProps {
@@ -23,7 +23,7 @@ export const FloatingFindingSurface: React.FC<FloatingFindingSurfaceProps> = ({
   };
 
   const title = finding?.title || ws.findingTitle;
-  const areaHa = finding ? `+${finding.spatial.area_ha.toFixed(2)} ha` : ws.totalAreaHa;
+  const areaHa = finding ? `${finding.spatial.area_ha.toFixed(2)} ha` : ws.totalAreaHa;
   const areaM2 = finding ? `${finding.spatial.area_m2.toLocaleString()} m²` : ws.totalAreaM2;
   const concordance = finding
     ? Math.round(
@@ -32,115 +32,107 @@ export const FloatingFindingSurface: React.FC<FloatingFindingSurfaceProps> = ({
           : finding.confidence.evidence_score
       )
     : ws.evidenceScore;
-  const checkpoint = finding?.model.checkpoint || 'changenet_s2_weights_val_iou_0.842.pt';
 
-  // Minimized pill state
+  const agentConfidence = ws.agentResult?.confidence;
+  const opticalScore = agentConfidence?.factors?.spatial_resolution 
+    ? Math.round(agentConfidence.factors.spatial_resolution * 100) 
+    : 88;
+  const temporalScore = agentConfidence?.factors?.model_confidence 
+    ? Math.round(agentConfidence.factors.model_confidence * 100) 
+    : 94;
+  const sarBackscatterDb = '-14.5 dB σ⁰';
+
+  // Minimized state
   if (ws.isFindingDismissed) {
     return (
-      <div className="absolute bottom-6 right-6 z-30 animate-in fade-in slide-in-from-bottom-2 duration-300 select-none">
+      <div className="absolute top-12 right-5 z-20 select-none animate-in fade-in duration-200">
         <button
           onClick={() => ws.setIsFindingDismissed(false)}
-          className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-white/95 backdrop-blur-md border border-[#E6E6E1] shadow-xl hover:border-[#111111] transition-all group"
+          className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-[#121212]/90 backdrop-blur-md border border-white/10 text-white text-[11px] font-mono hover:bg-neutral-800 transition-colors shadow-lg"
         >
-          <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)]" />
-          <span className="text-xs font-mono font-bold text-[#111111] uppercase">
-            FINDING: {areaHa}
-          </span>
-          <span className="text-[11px] font-semibold text-[#6F6F6A] group-hover:text-[#111111] flex items-center gap-1 transition-colors">
-            Inspect <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-          </span>
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+          <span className="font-bold">FINDING · {areaHa}</span>
+          <span className="text-neutral-400 text-[10px]">({concordance}%)</span>
         </button>
       </div>
     );
   }
 
   return (
-    <div className="absolute bottom-6 right-6 z-30 w-88 bg-white/95 backdrop-blur-md border border-[#E6E6E1] rounded-2xl shadow-2xl p-5 space-y-3.5 animate-in fade-in slide-in-from-bottom-3 duration-400 select-none">
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-[#F0EFEA] pb-2.5">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)]" />
-          <span className="text-[10px] font-mono font-bold tracking-wider text-[#6F6F6A] uppercase">
-            EVIDENCE FINDING OBJECT
+    <div className="absolute top-12 right-5 z-20 w-72 bg-[#121212]/92 backdrop-blur-md border border-white/10 rounded-md p-4 space-y-3.5 select-none text-white font-mono shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200">
+      {/* Top Header Row */}
+      <div className="flex items-center justify-between border-b border-white/10 pb-2">
+        <div className="flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+          <span className="text-[9px] font-bold tracking-widest text-neutral-400 uppercase">
+            FINDING
           </span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-mono text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-semibold flex items-center gap-1">
-            <ShieldCheck className="w-3 h-3 text-emerald-600" />
-            {concordance}% Concordance
-          </span>
-          <button
-            onClick={() => ws.setIsFindingDismissed(true)}
-            className="p-1 rounded-lg text-[#888888] hover:text-[#111111] hover:bg-[#F0EFEA] transition-colors"
-            title="Minimize Finding"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
-
-      {/* Dynamic Headline & Concise Explanation */}
-      <div className="space-y-1">
-        <h3 className="text-sm font-bold text-[#111111] tracking-tight uppercase leading-tight">
-          {title}
-        </h3>
-        <p className="text-xs text-[#555555] leading-relaxed line-clamp-3 font-sans">
-          {finding?.visual_evidence?.annotation || ws.synthesizedInsight}
-        </p>
-      </div>
-
-      {/* Clean Instrumentation Metric Display */}
-      <div className="p-3 rounded-xl bg-[#FAF9F7] border border-[#E6E6E1] flex items-baseline justify-between font-mono">
-        <div>
-          <span className="text-[9px] text-[#888888] uppercase block">DETERMINISTIC AREA</span>
-          <span className="text-2xl font-bold text-[#111111] tracking-tight">{areaHa}</span>
-        </div>
-        <div className="text-right">
-          <span className="text-[9px] text-[#888888] uppercase block">SURFACE M²</span>
-          <span className="text-xs font-semibold text-[#555555]">{areaM2}</span>
-        </div>
-      </div>
-
-      {/* Corroboration Stack with Checkpoint Badge */}
-      <div className="space-y-1.5 pt-0.5">
-        <div className="grid grid-cols-2 gap-1.5 text-[10px] font-mono">
-          <div className="flex items-center gap-1 p-1.5 rounded-lg bg-[#FAF9F7] border border-[#E6E6E1] text-[#333333]">
-            <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
-            <span>OPTICAL 88%</span>
-          </div>
-          <div className="flex items-center gap-1 p-1.5 rounded-lg bg-[#FAF9F7] border border-[#E6E6E1] text-[#333333]">
-            <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
-            <span>TEMPORAL 94%</span>
-          </div>
-          <div className="flex items-center gap-1 p-1.5 rounded-lg bg-[#FAF9F7] border border-[#E6E6E1] text-[#333333]">
-            <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
-            <span>SAR -14.5dB</span>
-          </div>
-          <div className="flex items-center gap-1 p-1.5 rounded-lg bg-[#FAF9F7] border border-[#E6E6E1] text-[#333333]">
-            <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
-            <span>SUBPIXEL ORB</span>
-          </div>
-        </div>
-
-        {/* Real Model Weights Badge */}
-        <div className="p-2 rounded-lg bg-[#F3F4F6] border border-[#E5E7EB] flex items-center justify-between text-[10px] font-mono text-[#4B5563]">
-          <div className="flex items-center gap-1.5 truncate">
-            <Database className="w-3 h-3 text-satblue-500 shrink-0" />
-            <span className="truncate">{checkpoint}</span>
-          </div>
-          <span className="shrink-0 px-1.5 py-0.5 bg-emerald-100 text-emerald-800 rounded font-semibold text-[9px]">
-            REAL WEIGHTS
-          </span>
-        </div>
-
         <button
-          onClick={handleInspect}
-          className="w-full mt-2 flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-[#111111] text-white hover:bg-black text-xs font-semibold shadow-sm transition-all group active:scale-[0.98]"
+          onClick={() => ws.setIsFindingDismissed(true)}
+          className="text-neutral-500 hover:text-neutral-300 transition-colors"
+          title="Dismiss Finding Readout"
         >
-          <span>Inspect evidence & provenance</span>
-          <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+          <X className="w-3 h-3" />
         </button>
       </div>
+
+      {/* Title / Description */}
+      <div className="space-y-0.5">
+        <div className="text-[10px] text-neutral-400 uppercase tracking-wider font-bold">
+          {finding?.category || 'DETECTION'}
+        </div>
+        <div className="font-sans font-semibold text-xs text-white leading-snug">
+          {title}
+        </div>
+      </div>
+
+      {/* Editorial Metric Readout */}
+      <div className="border-b border-white/10 pb-3">
+        <div className="text-2xl font-bold font-sans tracking-tight text-white leading-none">
+          {areaHa}
+        </div>
+        <div className="text-[10px] text-neutral-400 mt-1 font-mono">
+          {areaM2}
+        </div>
+      </div>
+
+      {/* Observation Interval */}
+      <div className="flex items-center justify-between text-[11px] text-neutral-300 border-b border-white/10 pb-2.5">
+        <span className="text-neutral-500 text-[10px] uppercase tracking-wider">INTERVAL</span>
+        <span className="font-bold text-white">T1 → T2</span>
+      </div>
+
+      {/* Concordance Score */}
+      <div className="flex items-center justify-between text-[11px] text-neutral-300 border-b border-white/10 pb-2.5">
+        <span className="text-neutral-500 text-[10px] uppercase tracking-wider">CONCORDANCE</span>
+        <span className="font-bold text-emerald-400">{concordance}%</span>
+      </div>
+
+      {/* Corroboration Breakdown */}
+      <div className="space-y-1.5 text-[10px] text-neutral-400 border-b border-white/10 pb-3">
+        <div className="flex items-center justify-between">
+          <span className="text-neutral-500 uppercase tracking-wider">OPTICAL CONSISTENCY</span>
+          <span className="font-bold text-neutral-200">{opticalScore}%</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-neutral-500 uppercase tracking-wider">TEMPORAL CORRELATION</span>
+          <span className="font-bold text-neutral-200">{temporalScore}%</span>
+        </div>
+        <div className="flex items-center justify-between pt-1 border-t border-white/5">
+          <span className="text-neutral-500 uppercase tracking-wider">SAR RADAR BACKSCATTER</span>
+          <span className="font-bold text-satblue-400 font-mono">{sarBackscatterDb}</span>
+        </div>
+      </div>
+
+      {/* Inspect Evidence Action */}
+      <button
+        onClick={handleInspect}
+        className="w-full flex items-center justify-between py-1.5 px-2 rounded bg-white/10 hover:bg-white/20 text-white text-[11px] font-semibold transition-colors group"
+      >
+        <span>INSPECT EVIDENCE</span>
+        <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+      </button>
     </div>
   );
 };

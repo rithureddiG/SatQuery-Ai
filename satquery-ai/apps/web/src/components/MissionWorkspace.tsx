@@ -9,6 +9,7 @@ import { SceneDrawer } from './drawers/SceneDrawer';
 import { EvidenceDrawer } from './drawers/EvidenceDrawer';
 import { TraceDrawer } from './drawers/TraceDrawer';
 import { LayersDrawer } from './drawers/LayersDrawer';
+import { ChatAssistantDrawer } from './drawers/ChatAssistantDrawer';
 import { ReportExportModal } from './ReportExportModal';
 import { SettingsModal } from './modals/SettingsModal';
 import { LiveSatelliteModal } from './modals/LiveSatelliteModal';
@@ -85,10 +86,15 @@ function MissionWorkspaceInner({
           isOpen={ws.activeDrawer === 'trace'}
           onClose={() => ws.closeDrawer()}
         />
+
+        <ChatAssistantDrawer
+          isOpen={ws.activeDrawer === 'chat'}
+          onClose={() => ws.closeDrawer()}
+        />
       </div>
 
       {/* 3. Bottom Persistent Command Surface & Execution Trace */}
-      <div className="shrink-0 bg-[#F7F7F5] border-t border-[#E6E6E1] px-6 py-3 space-y-2 z-20">
+      <div className="shrink-0 bg-[#0C0C0C] border-t border-[#1E1E1E] px-6 py-2.5 space-y-2 z-20">
         {/* Observable Agent Execution Progression */}
         {ws.isAnalyzing && (
           <AgentExecution currentStepIndex={ws.executionStepIndex} />
@@ -113,6 +119,9 @@ function MissionWorkspaceInner({
           csv:
             ws.agentResult?.report_urls?.csv ||
             `/api/v1/reports/mission_${ws.selectedMissionId}/csv`,
+          json:
+            ws.agentResult?.report_urls?.json ||
+            `/api/v1/reports/mission_${ws.selectedMissionId}/json`,
         }}
       />
 
