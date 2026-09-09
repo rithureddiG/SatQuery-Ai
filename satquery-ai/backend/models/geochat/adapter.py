@@ -172,7 +172,9 @@ class GeoChatAdapter:
 
                 return {
                     "answer": generated_text,
-                    "model_confidence": 0.90,
+                    # GeoChat generation does not expose a calibrated confidence.
+                    # Do not convert decoding success into a scientific probability.
+                    "model_confidence": None,
                     "model_name": "GeoChat-7B",
                     "model_version": "v1.0-4bit",
                     "weights_available": True,
@@ -199,7 +201,7 @@ class GeoChatAdapter:
                 f"[Development / Offline Mode] Scene analysis for query '{question}' on '{img_p.name}'. "
                 "GeoChat-7B architecture configured in 4-bit mode."
             ),
-            "model_confidence": 0.85,
+            "model_confidence": None,
             "model_name": "GeoChat-7B",
             "model_version": "v1.0-4bit",
             "weights_available": self.is_checkpoint_available(),
@@ -243,7 +245,7 @@ class GeoChatAdapter:
                 return {
                     "boxes": parsed_boxes,
                     "raw_output": generated_text,
-                    "model_confidence": 0.89 if parsed_boxes else 0.50,
+                    "model_confidence": None,
                     "model_name": "GeoChat-7B",
                     "model_version": "v1.0-4bit",
                     "weights_available": True,
@@ -263,23 +265,17 @@ class GeoChatAdapter:
                 f"Real mode active but GeoChat-7B weights not found at {self.config.checkpoint_dir}."
             )
 
-        boxes = []
-        if any(w in referring_expression.lower() for w in ["water", "lake", "river", "reservoir"]):
-            boxes.append({"ymin": 0.20, "xmin": 0.30, "ymax": 0.65, "xmax": 0.75})
-        elif any(b in referring_expression.lower() for b in ["building", "urban", "structure", "industrial"]):
-            boxes.append({"ymin": 0.15, "xmin": 0.15, "ymax": 0.45, "xmax": 0.50})
-        else:
-            boxes.append({"ymin": 0.25, "xmin": 0.25, "ymax": 0.75, "xmax": 0.75})
-
         return {
-            "boxes": boxes,
-            "model_confidence": 0.85,
+            "boxes": [],
+            "model_confidence": None,
             "model_name": "GeoChat-7B",
             "model_version": "v1.0-4bit",
             "weights_available": self.is_checkpoint_available(),
             "is_real_weights": False,
             "fallback_used": True,
             "execution_mode": "offline_fallback",
+            "unsupported": True,
+            "limitations": ["Grounding is unavailable without a verified image-conditioned checkpoint."],
             "device": self._device,
             "quantization": "4-bit NF4",
             "checkpoint_path": str(self.config.checkpoint_dir),

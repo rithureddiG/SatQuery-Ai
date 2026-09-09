@@ -19,7 +19,7 @@ from ..evidence import (
 def validate_cross_modal_pair(
     optical_row: ImageRecord,
     sar_row: ImageRecord,
-) -> Tuple[bool, float, List[str]]:
+) -> Tuple[bool, Optional[float], List[str]]:
     """Validate spatial overlap and sensor complementarity between an Optical and SAR asset."""
     warnings: List[str] = []
     
@@ -33,8 +33,8 @@ def validate_cross_modal_pair(
     elif "sar" not in sar_mod and sar_row.band_count > 2 and optical_row.band_count > 2:
         warnings.append("Neither image has explicit SAR tags; running dual-sensor comparison.")
 
-    # Spatial overlap calculation
-    iou_score = 0.92  # Default high score for aligned pairs
+    # Spatial overlap calculation. Missing geometry is unknown, never implicitly aligned.
+    iou_score: Optional[float] = None
     b_bounds = optical_row.bounds
     a_bounds = sar_row.bounds
 
@@ -54,10 +54,12 @@ def validate_cross_modal_pair(
             else:
                 iou_score = 0.0
                 warnings.append("Images have no geographic overlap.")
-        except Exception:
-            pass
+        except (KeyError, TypeError, ValueError):
+            warnings.append("Image bounds are malformed; spatial overlap is unknown.")
+    else:
+        warnings.append("Missing geographic bounds; spatial overlap is unknown.")
 
-    is_valid = iou_score > 0.1 or len(warnings) == 0
+    is_valid = iou_score is not None and iou_score > 0.1
     return is_valid, iou_score, warnings
 
 
@@ -91,10 +93,16 @@ def run_optical_sar_pipeline(
         ExecutionStep(
             step_number=1,
             tool="retrieve_cross_modal_assets",
-            description=f"Loaded Optical: {optical_row.filename} & SAR: {sar_row.filename} (Spatial Overlap IoU: {int(reg_quality * 100)}%)",
+            description=(
+                f"Loaded Optical: {optical_row.filename} & SAR: {sar_row.filename} "
+                f"(Spatial Overlap IoU: {int(reg_quality * 100)}%)"
+                if reg_quality is not None else
+                f"Loaded Optical: {optical_row.filename} & SAR: {sar_row.filename} "
+                "(Spatial Overlap IoU: unknown)"
+            ),
             status="completed",
             duration_ms=int((time.perf_counter() - t0) * 1000),
-            output_summary=f"IoU: {reg_quality}",
+            output_summary=f"IoU: {reg_quality if reg_quality is not None else 'unknown'}",
         )
     )
 
@@ -136,7 +144,12 @@ def run_optical_sar_pipeline(
         ExecutionStep(
             step_number=3,
             tool="evaluate_cross_modal_confidence",
-            description=f"Calculated multimodal confidence: {int(confidence.overall * 100)}% (SAR agreement: {int(corroboration_score * 100)}%)",
+            description=(
+                f"Calculated multimodal confidence: {int(confidence.overall * 100)}% "
+                f"(SAR agreement: {int(corroboration_score * 100)}%)"
+                if confidence.overall is not None and corroboration_score is not None else
+                "Multimodal confidence unavailable because required evidence is missing."
+            ),
             status="completed",
             duration_ms=int((time.perf_counter() - t2) * 1000),
             output_summary=f"Overall: {confidence.overall}",

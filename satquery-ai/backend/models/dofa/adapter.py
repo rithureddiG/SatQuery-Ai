@@ -111,9 +111,11 @@ class DOFAAdapter:
 
         return {
             "sensor": "optical",
-            "band_count": 3,
-            "mean_spectral": [120.0, 140.0, 110.0],
-            "water_fraction_proxy": 0.05,
+            "supported": False,
+            "limitations": ["Optical feature extraction requires a readable GeoTIFF."],
+            "band_count": None,
+            "mean_spectral": None,
+            "water_fraction_proxy": None,
             "embedding_dim": self.config.embed_dim,
         }
 
@@ -148,12 +150,14 @@ class DOFAAdapter:
 
         return {
             "sensor": "sar",
-            "polarization": "VV",
-            "mean_sigma0_db": -14.5,
-            "min_sigma0_db": -24.0,
-            "max_sigma0_db": -6.0,
-            "std_sigma0_db": 3.8,
-            "low_backscatter_fraction": 0.05,
+            "supported": False,
+            "limitations": ["SAR feature extraction requires a readable GeoTIFF."],
+            "polarization": None,
+            "mean_sigma0_db": None,
+            "min_sigma0_db": None,
+            "max_sigma0_db": None,
+            "std_sigma0_db": None,
+            "low_backscatter_fraction": None,
             "embedding_dim": self.config.embed_dim,
         }
 
@@ -169,6 +173,23 @@ class DOFAAdapter:
         # 1. Compute Spatial Cross-Modal Corroboration
         opt_water = opt_feats["water_fraction_proxy"]
         sar_water = sar_feats["low_backscatter_fraction"]
+        if opt_water is None or sar_water is None:
+            return {
+                "corroboration_score": None,
+                "spatial_iou": None,
+                "spatial_agreement_ratio": None,
+                "joint_claim": "Cross-modal corroboration is unavailable for the supplied assets.",
+                "optical_features": opt_feats,
+                "sar_features": sar_feats,
+                "model_name": "deterministic_optical_sar_corroboration",
+                "model_version": None,
+                "weights_available": self.is_checkpoint_available(),
+                "is_real_weights": False,
+                "fallback_used": True,
+                "execution_mode": "unsupported",
+                "device": self._device,
+                "limitations": ["Input format is not supported by the deterministic extractor."],
+            }
 
         # If spatial arrays are available from rasterio, compute true spatial fusion
         spatial_iou = None
@@ -230,4 +251,4 @@ class DOFAAdapter:
 
 # Auto-register dofa adapter
 dofa_adapter = DOFAAdapter()
-model_registry.register("dofa_foundation", dofa_adapter)
+model_registry.register("dofa", dofa_adapter)
