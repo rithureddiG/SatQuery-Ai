@@ -10,6 +10,10 @@ import {
   Minus,
   RotateCcw,
   Grid,
+  Crosshair,
+  MapPin,
+  Clock,
+  Eye,
 } from 'lucide-react';
 import { useWorkspace, MapTool } from '../../context/WorkspaceContext';
 
@@ -20,10 +24,10 @@ export const ScientificLeftRail: React.FC = () => {
     <aside className="select-none pointer-events-auto">
       {/* Precision Single-Column Instrument Rail */}
       <div className="w-10 bg-[#121212]/90 backdrop-blur-md border border-white/10 rounded-md p-1 flex flex-col items-center gap-1 shadow-lg text-neutral-400">
-        {/* Pointer / Inspect */}
+        {/* Pointer / Select */}
         <button
           onClick={() => ws.setActiveTool('select')}
-          title="Pointer / Inspect Feature"
+          title="Pointer / Select"
           className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
             ws.activeTool === 'select'
               ? 'bg-white text-black font-bold'
@@ -32,6 +36,70 @@ export const ScientificLeftRail: React.FC = () => {
         >
           <MousePointer className="w-3.5 h-3.5 stroke-[2]" />
         </button>
+
+        {/* Phase 2: Spectral & Pixel Inspector */}
+        <button
+          id="tool-spectral-inspector-btn"
+          onClick={() => {
+            ws.setActiveTool('inspect');
+            ws.setIsSpectralInspectorActive(!ws.isSpectralInspectorActive);
+          }}
+          title="Spectral & Pixel Inspector (Sentinel-2 13-band BOA curve & SAR C-Band)"
+          className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
+            ws.isSpectralInspectorActive || ws.activeTool === 'inspect'
+              ? 'bg-cyan-500 text-black font-bold shadow-md shadow-cyan-500/30'
+              : 'hover:text-cyan-400 hover:bg-neutral-800'
+          }`}
+        >
+          <Crosshair className="w-3.5 h-3.5 stroke-[2.2]" />
+        </button>
+
+        {/* Phase 1: Custom AOI Importer */}
+        <button
+          id="tool-aoi-importer-btn"
+          onClick={() => ws.setIsAoiModalOpen(true)}
+          title={`Custom AOI Importer ${ws.customAoi ? `(${ws.customAoi.name})` : '(GeoJSON / KML / Shapefile)'}`}
+          className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
+            ws.customAoi
+              ? 'bg-cyan-950 text-cyan-300 border border-cyan-700'
+              : 'hover:text-white hover:bg-neutral-800'
+          }`}
+        >
+          <MapPin className="w-3.5 h-3.5 stroke-[2]" />
+        </button>
+
+        {/* Phase 3: Multi-Epoch Timeline */}
+        <button
+          id="tool-timeline-toggle-btn"
+          onClick={() => ws.setIsTimelineOpen(!ws.isTimelineOpen)}
+          title={`Multi-Epoch Timeline (${ws.timelineEpochs.length} passes)`}
+          className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
+            ws.isTimelineOpen
+              ? 'bg-blue-600 text-white font-bold'
+              : 'hover:text-white hover:bg-neutral-800'
+          }`}
+        >
+          <Clock className="w-3.5 h-3.5 stroke-[2]" />
+        </button>
+
+        {/* Phase 5: Sentinel Watch Monitoring */}
+        <button
+          id="tool-sentinel-watch-btn"
+          onClick={() => ws.setIsSentinelWatchOpen(!ws.isSentinelWatchOpen)}
+          title={`Sentinel Watchdog Monitoring (${ws.watches.length} active watches)`}
+          className={`w-8 h-8 rounded flex items-center justify-center transition-colors relative ${
+            ws.isSentinelWatchOpen
+              ? 'bg-amber-600 text-white font-bold'
+              : 'hover:text-amber-400 hover:bg-neutral-800'
+          }`}
+        >
+          <Eye className="w-3.5 h-3.5 stroke-[2]" />
+          {ws.watches.some((w) => w.status === 'Alert Triggered') && (
+            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-amber-400 rounded-full animate-ping"></span>
+          )}
+        </button>
+
+        <div className="w-5 h-px bg-neutral-800 my-0.5" />
 
         {/* Pan Viewport */}
         <button

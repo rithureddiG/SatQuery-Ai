@@ -9,6 +9,11 @@ import { InteractiveEarthViewer } from './InteractiveEarthViewer';
 import { FloatingFindingSurface } from '../intelligence/FloatingFindingSurface';
 import { Ruler, X, Layers, Pentagon } from 'lucide-react';
 import { useWorkspace, ChangeCluster, CursorCoordinates } from '../../context/WorkspaceContext';
+import { AoiImportModal } from '../AoiImportModal';
+import { SpectralInspectorPanel } from '../SpectralInspectorPanel';
+import { MultiEpochTimeline } from '../MultiEpochTimeline';
+import { SentinelWatchDrawer } from '../SentinelWatchDrawer';
+import { SynchronizedDualViewport } from './SynchronizedDualViewport';
 
 interface GeoWorkspaceProps {
   previewUrl?: string | null;
@@ -167,20 +172,32 @@ export const GeoWorkspace: React.FC<GeoWorkspaceProps> = ({
             <div className="absolute inset-0 map-cross-grid pointer-events-none opacity-20 z-10" />
           )}
 
-          {/* Real Interactive Earth Observation Satellite Viewer */}
+          {/* Real Interactive Earth Observation Satellite Viewer or Synchronized Dual Viewport */}
           <div className="absolute inset-0 w-full h-full z-0">
-            <InteractiveEarthViewer
-              activeLens={activeLens}
-              activeDatasetIndex={ws.activeDatasetIndex}
-              temporalMode={ws.temporalMode}
-              sliderPos={ws.sliderPos}
-              onSliderChange={ws.setSliderPos}
-              clusters={clusters}
-              selectedClusterId={selectedRegionId}
-              onSelectCluster={onSelectRegion}
-              dateT1={dateT1}
-              dateT2={dateT2}
-            />
+            {ws.temporalMode === 'Side by Side' ? (
+              <SynchronizedDualViewport />
+            ) : (
+              <InteractiveEarthViewer
+                activeLens={activeLens}
+                activeDatasetIndex={ws.activeDatasetIndex}
+                temporalMode={ws.temporalMode}
+                sliderPos={ws.sliderPos}
+                onSliderChange={ws.setSliderPos}
+                clusters={clusters}
+                selectedClusterId={selectedRegionId}
+                onSelectCluster={onSelectRegion}
+                dateT1={dateT1}
+                dateT2={dateT2}
+              />
+            )}
+          </div>
+
+          {/* Spectral & Pixel Inspector Floating Analytics Card */}
+          <SpectralInspectorPanel />
+
+          {/* Multi-Epoch Observation Timeline Strip */}
+          <div className="absolute bottom-12 left-4 right-4 z-20 pointer-events-auto max-w-5xl mx-auto">
+            <MultiEpochTimeline />
           </div>
 
           {/* Precision Distance Ruler Callout */}
@@ -252,6 +269,12 @@ export const GeoWorkspace: React.FC<GeoWorkspaceProps> = ({
         dateT1={dateT1}
         dateT2={dateT2}
       />
+
+      {/* Phase 1: Custom AOI Importer Modal */}
+      <AoiImportModal />
+
+      {/* Phase 5: Sentinel Watch Autonomous Monitoring Drawer */}
+      <SentinelWatchDrawer />
     </div>
   );
 };

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { TemporalViewMode } from '../../context/WorkspaceContext';
+import { TemporalViewMode, useWorkspace } from '../../context/WorkspaceContext';
 
 export type { TemporalViewMode };
 
@@ -22,8 +22,10 @@ export const TemporalController: React.FC<TemporalControllerProps> = ({
   dateT1 = '14 MAR 2024',
   dateT2 = '19 MAR 2026',
 }) => {
+  const ws = useWorkspace();
+
   return (
-    <div className="h-10 shrink-0 bg-[#0A0A0A] border-t border-[#202020] px-5 flex items-center justify-between gap-6 select-none z-10 text-neutral-400 font-mono text-xs">
+    <div className="h-10 shrink-0 bg-[#0A0A0A] border-t border-[#202020] px-5 flex items-center justify-between gap-4 select-none z-10 text-neutral-400 font-mono text-xs">
       {/* Precision Scientific Temporal Scrubber */}
       <div className="flex-1 flex items-center gap-3">
         {/* T1 Marker */}
@@ -61,40 +63,58 @@ export const TemporalController: React.FC<TemporalControllerProps> = ({
         </button>
       </div>
 
-      {/* Mode Switcher: SWIPE · SIDE BY SIDE · DIFFERENCE */}
-      <div className="flex items-center gap-0.5 bg-[#141414] p-0.5 rounded border border-neutral-800 text-[10px]">
+      {/* Multi-Epoch Timeline & Viewport Mode Switchers */}
+      <div className="flex items-center gap-2">
+        {/* Multi-Epoch Timeline Button */}
         <button
-          onClick={() => onSelectTemporalMode('Swipe')}
-          className={`px-2 py-0.5 rounded transition-colors ${
-            temporalMode === 'Swipe'
-              ? 'bg-neutral-800 text-white font-bold'
-              : 'text-neutral-500 hover:text-neutral-300'
+          id="temporal-timeline-toggle-btn"
+          onClick={() => ws.setIsTimelineOpen(!ws.isTimelineOpen)}
+          className={`px-2 py-1 rounded border text-[10px] flex items-center gap-1 transition ${
+            ws.isTimelineOpen
+              ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 font-bold'
+              : 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:text-white'
           }`}
+          title="Toggle Multi-Epoch Timeline Carousel"
         >
-          SWIPE
+          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+          <span>TIMELINE ({ws.timelineEpochs.length})</span>
         </button>
 
-        <button
-          onClick={() => onSelectTemporalMode('Side by Side')}
-          className={`px-2 py-0.5 rounded transition-colors ${
-            temporalMode === 'Side by Side'
-              ? 'bg-neutral-800 text-white font-bold'
-              : 'text-neutral-500 hover:text-neutral-300'
-          }`}
-        >
-          SPLIT
-        </button>
+        {/* Mode Switcher: SWIPE · DUAL SPLIT · DIFFERENCE */}
+        <div className="flex items-center gap-0.5 bg-[#141414] p-0.5 rounded border border-neutral-800 text-[10px]">
+          <button
+            onClick={() => onSelectTemporalMode('Swipe')}
+            className={`px-2 py-0.5 rounded transition-colors ${
+              temporalMode === 'Swipe'
+                ? 'bg-neutral-800 text-white font-bold'
+                : 'text-neutral-500 hover:text-neutral-300'
+            }`}
+          >
+            SWIPE
+          </button>
 
-        <button
-          onClick={() => onSelectTemporalMode('Difference')}
-          className={`px-2 py-0.5 rounded transition-colors ${
-            temporalMode === 'Difference'
-              ? 'bg-neutral-800 text-white font-bold'
-              : 'text-neutral-500 hover:text-neutral-300'
-          }`}
-        >
-          DIFF
-        </button>
+          <button
+            onClick={() => onSelectTemporalMode('Side by Side')}
+            className={`px-2 py-0.5 rounded transition-colors ${
+              temporalMode === 'Side by Side'
+                ? 'bg-neutral-800 text-white font-bold'
+                : 'text-neutral-500 hover:text-neutral-300'
+            }`}
+          >
+            SPLIT
+          </button>
+
+          <button
+            onClick={() => onSelectTemporalMode('Difference')}
+            className={`px-2 py-0.5 rounded transition-colors ${
+              temporalMode === 'Difference'
+                ? 'bg-neutral-800 text-white font-bold'
+                : 'text-neutral-500 hover:text-neutral-300'
+            }`}
+          >
+            DIFF
+          </button>
+        </div>
       </div>
     </div>
   );

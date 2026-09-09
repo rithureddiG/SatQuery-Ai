@@ -1,3 +1,14 @@
+export type LensMode =
+  | 'True Color'
+  | 'NIR'
+  | 'SWIR'
+  | 'SAR'
+  | 'NDVI'
+  | 'NDWI'
+  | 'NDBI'
+  | 'CHANGE'
+  | 'EVIDENCE';
+
 export interface CRSInfo {
   present: boolean;
   valid: boolean;
@@ -370,3 +381,152 @@ export interface SearchEarthLocation {
   country: string;
   areaEstimateKm2?: number;
 }
+
+export interface CustomAOI {
+  id: string;
+  name: string;
+  format: 'geojson' | 'kml' | 'shapefile' | 'manual';
+  crs: {
+    inputCrs: string;
+    canonicalCrs: string; // EPSG:4326
+    utmZone: string;      // e.g. EPSG:32643
+  };
+  geometry: {
+    type: 'Polygon' | 'MultiPolygon';
+    coordinates: number[][][] | number[][][][];
+  };
+  bbox: [number, number, number, number]; // [minLon, minLat, maxLon, maxLat]
+  centroid: [number, number]; // [lon, lat]
+  metrics: {
+    areaHa: number;
+    areaM2: number;
+    perimeterM: number;
+    vertexCount: number;
+  };
+  validation: {
+    isValid: boolean;
+    isSelfIntersecting: boolean;
+    isClosed: boolean;
+    reprojected: boolean;
+    warnings: string[];
+  };
+  createdAt: string;
+}
+
+export interface SpectralBand {
+  band: string;
+  name: string;
+  wavelengthNm: number;
+  reflectance: number;
+  category: 'VNIR' | 'RedEdge' | 'SWIR';
+}
+
+export interface SpectralIndices {
+  ndvi: number;
+  ndwi: number;
+  ndbi: number;
+  evi: number;
+  savi: number;
+}
+
+export interface SarSignature {
+  vvDb: number;
+  vhDb: number;
+  vvVhRatioDb: number;
+  scatteringMechanism: 'Double-bounce (Built Structure)' | 'Volumetric (Canopy / Crops)' | 'Specular (Water / Smooth Surface)' | 'Rough Surface (Bare Soil)';
+  polarizationConfidence: number;
+}
+
+export interface ZonalStatistics {
+  meanNdvi: number;
+  medianNdvi: number;
+  stdDevNdvi: number;
+  minNdvi: number;
+  maxNdvi: number;
+  meanSarVvDb: number;
+  meanSarVhDb: number;
+  areaHa: number;
+  pixelCount: number;
+  dominantSurface: string;
+}
+
+export interface SpectralInspectionResult {
+  location: {
+    lat: number;
+    lon: number;
+    gsdM: number;
+    crs: string;
+  };
+  sensor: {
+    optical: string;
+    sar: string;
+    acquisitionDate: string;
+    sunElevationDeg: number;
+  };
+  bands: SpectralBand[];
+  indices: SpectralIndices;
+  sar: SarSignature;
+  zonalStats?: ZonalStatistics;
+}
+
+export interface EpochObservation {
+  id: string;
+  date: string;
+  year: number;
+  month: string;
+  sensor: 'Sentinel-2A' | 'Sentinel-2B' | 'Sentinel-1A' | 'Landsat-9';
+  modality: 'optical' | 'sar';
+  cloudCoverPct: number;
+  resolutionM: number;
+  orbitPass: string;
+  sunElevationDeg: number;
+  tileId: string;
+  isBaseline?: boolean;
+  isLatest?: boolean;
+  cumulativeChangeHa: number;
+  thumbnailUrl: string;
+  quality: 'Excellent' | 'Good' | 'Cloudy' | 'Radar High-Fidelity';
+}
+
+export type DisplayViewMode = 'swipe' | 'split' | 'single' | 'flicker' | 'difference';
+
+export interface SplitViewportConfig {
+  leftLens: LensMode;
+  rightLens: LensMode;
+  leftEpochId: string;
+  rightEpochId: string;
+  splitRatio: number;
+  syncPanZoom: boolean;
+  crosshairSync: boolean;
+}
+
+export interface SentinelWatchCondition {
+  type: 'built_up_increase' | 'ndvi_decrease' | 'sar_anomaly' | 'water_loss';
+  operator: '>' | '<';
+  thresholdValue: number;
+  unit: 'ha' | '%' | 'dB';
+}
+
+export interface SentinelWatchItem {
+  id: string;
+  name: string;
+  locationName: string;
+  centroid: [number, number];
+  aoiGeometry?: any;
+  aoiAreaHa: number;
+  sensors: string[];
+  frequency: 'Every available acquisition' | 'Weekly digest' | 'Bi-monthly';
+  conditions: SentinelWatchCondition[];
+  status: 'Monitoring' | 'Alert Triggered' | 'Standby';
+  lastCheckDate: string;
+  nextSceneDate: string;
+  latestDeltas: {
+    builtUpAreaHaChange: number;
+    vegetationPctChange: number;
+    sarAnomalyDb: number;
+    alertTriggered: boolean;
+    triggerReason?: string;
+  };
+  createdAt: string;
+}
+

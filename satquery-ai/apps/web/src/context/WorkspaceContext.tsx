@@ -17,7 +17,21 @@ import {
   Finding,
   SatelliteObservationItem,
   SearchEarthLocation,
+  CustomAOI,
+  SpectralInspectionResult,
+  EpochObservation,
+  DisplayViewMode,
+  SplitViewportConfig,
+  SentinelWatchItem,
 } from '../types';
+export type {
+  CustomAOI,
+  SpectralInspectionResult,
+  EpochObservation,
+  DisplayViewMode,
+  SplitViewportConfig,
+  SentinelWatchItem,
+};
 import { fetchHealth, fetchImagesList, executeAgentQuery } from '../lib/api';
 import { GOLDEN_MISSION_SPEC, createCanonicalFinding } from '../lib/goldenMission';
 import { InspectionDossier, PREVIOUS_INSPECTION_DOSSIERS } from '../types/dossier';
@@ -45,7 +59,7 @@ export type LensMode =
   | 'CHANGE'
   | 'EVIDENCE';
 export type TemporalViewMode = 'Swipe' | 'Side by Side' | 'Difference';
-export type MapTool = 'select' | 'pan' | 'box' | 'polygon' | 'pin' | 'measure' | 'measure_area';
+export type MapTool = 'select' | 'pan' | 'box' | 'polygon' | 'pin' | 'measure' | 'measure_area' | 'inspect';
 export type VoiceStatus = 'IDLE' | 'LISTENING' | 'PROCESSING' | 'ERROR' | 'UNSUPPORTED';
 export type WorkstationMode = 'LIVE EARTH' | 'SCIENTIFIC BENCHMARK';
 
@@ -637,7 +651,7 @@ export function calculateGeodesic(
   return { distM, distKm, bearing };
 }
 
-export type ActiveDrawer = 'scene' | 'analysis' | 'layers' | 'evidence' | 'trace' | 'settings' | 'chat' | null;
+export type ActiveDrawer = 'scene' | 'analysis' | 'layers' | 'evidence' | 'trace' | 'settings' | 'chat' | 'aoi' | 'inspector' | 'timeline' | 'watch' | null;
 export type UnifiedSystemState = 'READY' | 'ANALYZING' | 'VERIFIED' | 'OFFLINE' | 'ERROR';
 
 export const OBSERVABLE_STAGES = [
@@ -856,6 +870,52 @@ interface WorkspaceContextType {
   customInsight: string;
   customAreaHa: string;
   customAreaM2: string;
+
+  // Custom AOI Importer
+  customAoi: CustomAOI | null;
+  setCustomAoi: (aoi: CustomAOI | null) => void;
+  isAoiModalOpen: boolean;
+  setIsAoiModalOpen: (open: boolean) => void;
+
+  // Spectral & Pixel Inspector
+  spectralInspection: SpectralInspectionResult | null;
+  isSpectralInspectorActive: boolean;
+  setIsSpectralInspectorActive: (active: boolean) => void;
+  isInspectingPixel: boolean;
+  inspectPixel: (lat: number, lon: number, polygon?: any, areaHa?: number) => Promise<void>;
+  clearSpectralInspection: () => void;
+
+  // Multi-Epoch Timeline
+  timelineEpochs: EpochObservation[];
+  activeEpochId: string;
+  timelineBaselineId: string;
+  timelineTargetId: string;
+  isTimelinePlaying: boolean;
+  timelineSpeed: number;
+  isTimelineOpen: boolean;
+  setIsTimelineOpen: (open: boolean) => void;
+  setActiveEpochId: (id: string) => void;
+  setTimelineBaselineId: (id: string) => void;
+  setTimelineTargetId: (id: string) => void;
+  toggleTimelinePlayback: () => void;
+  setTimelineSpeed: (speed: number) => void;
+  jumpToNextClearScene: () => void;
+
+  // Dual Synchronized Viewport
+  displayViewMode: DisplayViewMode;
+  setDisplayViewMode: (mode: DisplayViewMode) => void;
+  splitConfig: SplitViewportConfig;
+  setSplitConfig: React.Dispatch<React.SetStateAction<SplitViewportConfig>>;
+
+  // Sentinel Watch Monitoring
+  isSentinelWatchOpen: boolean;
+  setIsSentinelWatchOpen: (open: boolean) => void;
+  watches: SentinelWatchItem[];
+  activeWatch: SentinelWatchItem | null;
+  setActiveWatch: (watch: SentinelWatchItem | null) => void;
+  loadWatches: () => Promise<void>;
+  createWatch: (data: any) => Promise<boolean>;
+  deleteWatch: (id: string) => Promise<boolean>;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType | null>(null);
@@ -1049,6 +1109,193 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
     else setActiveLens('CHANGE');
     setIsDossierSearchOpen(false);
   }, []);
+
+  // Custom AOI Importer
+  const [customAoi, setCustomAoiState] = useState<CustomAOI | null>(null);
+  const [isAoiModalOpen, setIsAoiModalOpen] = useState<boolean>(false);
+
+  const setCustomAoi = useCallback((aoi: CustomAOI | null) => {
+    setCustomAoiState(aoi);
+    if (aoi) {
+      setCustomMissionData({
+        name: aoi.name,
+        lat: aoi.centroid[1],
+        lon: aoi.centroid[0],
+        utmZone: aoi.crs.utmZone,
+        areaAoi: `${aoi.metrics.areaHa.toFixed(2)} ha (${aoi.metrics.areaM2.toLocaleString()} m²)`,
+      });
+      setFindingTitle(`AOI: ${aoi.name}`);
+      setCustomAreaHa(`${aoi.metrics.areaHa.toFixed(2)} ha`);
+      setCustomAreaM2(`${aoi.metrics.areaM2.toLocaleString()} m²`);
+    }
+  }, []);
+
+  // Spectral & Pixel Inspector
+  const [spectralInspection, setSpectralInspection] = useState<SpectralInspectionResult | null>(null);
+  const [isSpectralInspectorActive, setIsSpectralInspectorActive] = useState<boolean>(false);
+  const [isInspectingPixel, setIsInspectingPixel] = useState<boolean>(false);
+
+  const inspectPixel = useCallback(async (lat: number, lon: number, polygon?: any, areaHa?: number) => {
+    setIsInspectingPixel(true);
+    try {
+      const res = await fetch('/api/v1/analysis/spectral', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lat, lon, polygon, areaHa, epochDate: dateT2 }),
+      });
+      const data = await res.json();
+      if (data.success && data.inspection) {
+        setSpectralInspection(data.inspection);
+      }
+    } catch (e) {
+      console.error('Failed to inspect spectral data:', e);
+    } finally {
+      setIsInspectingPixel(false);
+    }
+  }, [dateT2]);
+
+  const clearSpectralInspection = useCallback(() => {
+    setSpectralInspection(null);
+  }, []);
+
+  // Multi-Epoch Timeline
+  const [timelineEpochs, setTimelineEpochs] = useState<EpochObservation[]>([]);
+  const [activeEpochId, setActiveEpochId] = useState<string>('epoch_2026_08');
+  const [timelineBaselineId, setTimelineBaselineId] = useState<string>('epoch_2024_03');
+  const [timelineTargetId, setTimelineTargetId] = useState<string>('epoch_2026_08');
+  const [isTimelinePlaying, setIsTimelinePlaying] = useState<boolean>(false);
+  const [timelineSpeed, setTimelineSpeed] = useState<number>(1);
+  const [isTimelineOpen, setIsTimelineOpen] = useState<boolean>(true);
+
+  // Load timeline observations
+  const loadTimelineEpochs = useCallback(async () => {
+    try {
+      const res = await fetch('/api/v1/satellite/timeline');
+      const data = await res.json();
+      if (data.success && data.observations) {
+        setTimelineEpochs(data.observations);
+        if (data.observations.length > 0) {
+          const latest = data.observations[data.observations.length - 1];
+          const baseline = data.observations[0];
+          setActiveEpochId(latest.id);
+          setTimelineBaselineId(baseline.id);
+          setTimelineTargetId(latest.id);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load timeline epochs:', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadTimelineEpochs();
+  }, [loadTimelineEpochs]);
+
+  // Timeline auto-playback interval
+  useEffect(() => {
+    if (!isTimelinePlaying || timelineEpochs.length === 0) return;
+
+    const intervalMs = Math.max(500, Math.round(1800 / timelineSpeed));
+    const timer = setInterval(() => {
+      setActiveEpochId((prevId) => {
+        const idx = timelineEpochs.findIndex((ep) => ep.id === prevId);
+        const nextIdx = (idx + 1) % timelineEpochs.length;
+        const nextEpoch = timelineEpochs[nextIdx];
+        setDateT2(nextEpoch.date);
+        return nextEpoch.id;
+      });
+    }, intervalMs);
+
+    return () => clearInterval(timer);
+  }, [isTimelinePlaying, timelineSpeed, timelineEpochs]);
+
+  const toggleTimelinePlayback = useCallback(() => {
+    setIsTimelinePlaying((prev) => !prev);
+  }, []);
+
+  const jumpToNextClearScene = useCallback(() => {
+    if (timelineEpochs.length === 0) return;
+    const currentIdx = timelineEpochs.findIndex((ep) => ep.id === activeEpochId);
+    // Find next epoch with cloud cover < 2%
+    for (let i = 1; i <= timelineEpochs.length; i++) {
+      const nextIdx = (currentIdx + i) % timelineEpochs.length;
+      const candidate = timelineEpochs[nextIdx];
+      if (candidate.cloudCoverPct <= 2.0) {
+        setActiveEpochId(candidate.id);
+        setDateT2(candidate.date);
+        break;
+      }
+    }
+  }, [timelineEpochs, activeEpochId]);
+
+  // Dual Synchronized Viewports
+  const [displayViewMode, setDisplayViewMode] = useState<DisplayViewMode>('swipe');
+  const [splitConfig, setSplitConfig] = useState<SplitViewportConfig>({
+    leftLens: 'True Color',
+    rightLens: 'SAR',
+    leftEpochId: 'ep-01',
+    rightEpochId: 'ep-05',
+    splitRatio: 50,
+    syncPanZoom: true,
+    crosshairSync: true,
+  });
+
+  // Sentinel Watch Monitoring
+  const [isSentinelWatchOpen, setIsSentinelWatchOpen] = useState<boolean>(false);
+  const [watches, setWatches] = useState<SentinelWatchItem[]>([]);
+  const [activeWatch, setActiveWatch] = useState<SentinelWatchItem | null>(null);
+
+  const loadWatches = useCallback(async () => {
+    try {
+      const res = await fetch('/api/v1/monitoring/watch');
+      const data = await res.json();
+      if (data.success && data.watches) {
+        setWatches(data.watches);
+      }
+    } catch (e) {
+      console.error('Failed to load Sentinel Watches:', e);
+    }
+  }, []);
+
+  const createWatch = useCallback(async (data: any): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/v1/monitoring/watch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      const resData = await res.json();
+      if (resData.success) {
+        await loadWatches();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      console.error('Failed to create Sentinel Watch:', e);
+      return false;
+    }
+  }, [loadWatches]);
+
+  const deleteWatch = useCallback(async (id: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`/api/v1/monitoring/watch?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
+      const resData = await res.json();
+      if (resData.success) {
+        await loadWatches();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      console.error('Failed to delete Sentinel Watch:', e);
+      return false;
+    }
+  }, [loadWatches]);
+
+  useEffect(() => {
+    loadWatches();
+  }, [loadWatches]);
 
   // Workstation Mode & Location
   const [workstationMode, setWorkstationMode] = useState<WorkstationMode>('SCIENTIFIC BENCHMARK');
@@ -1865,6 +2112,52 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         setCustomAreaM2,
         customAreaHa,
         customAreaM2,
+
+        // Custom AOI Importer
+        customAoi,
+        setCustomAoi,
+        isAoiModalOpen,
+        setIsAoiModalOpen,
+
+        // Spectral & Pixel Inspector
+        spectralInspection,
+        isSpectralInspectorActive,
+        setIsSpectralInspectorActive,
+        isInspectingPixel,
+        inspectPixel,
+        clearSpectralInspection,
+
+        // Multi-Epoch Timeline
+        timelineEpochs,
+        activeEpochId,
+        timelineBaselineId,
+        timelineTargetId,
+        isTimelinePlaying,
+        timelineSpeed,
+        isTimelineOpen,
+        setIsTimelineOpen,
+        setActiveEpochId,
+        setTimelineBaselineId,
+        setTimelineTargetId,
+        toggleTimelinePlayback,
+        setTimelineSpeed,
+        jumpToNextClearScene,
+
+        // Dual Synchronized Viewport
+        displayViewMode,
+        setDisplayViewMode,
+        splitConfig,
+        setSplitConfig,
+
+        // Sentinel Watch Monitoring
+        isSentinelWatchOpen,
+        setIsSentinelWatchOpen,
+        watches,
+        activeWatch,
+        setActiveWatch,
+        loadWatches,
+        createWatch,
+        deleteWatch,
       }}
     >
       {children}

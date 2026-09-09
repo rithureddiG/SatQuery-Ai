@@ -236,6 +236,55 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
             <span>Workspace</span>
           </button>
 
+          {/* Phase 1: Custom AOI Importer Button */}
+          <button
+            id="header-aoi-btn"
+            onClick={() => ws.setIsAoiModalOpen(true)}
+            className={`px-2 py-1 rounded transition-colors flex items-center gap-1 ${
+              ws.customAoi
+                ? 'text-cyan-400 bg-cyan-950/60 border border-cyan-800 font-bold'
+                : 'hover:text-white hover:bg-neutral-900 text-neutral-300'
+            }`}
+            title="Import or view Custom AOI (GeoJSON, KML, Shapefile)"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+            <span>{ws.customAoi ? `AOI: ${ws.customAoi.name.split(' ')[0]}` : 'AOI'}</span>
+          </button>
+
+          {/* Phase 2: Spectral & Pixel Inspector */}
+          <button
+            id="header-inspector-btn"
+            onClick={() => {
+              ws.setActiveTool('inspect');
+              ws.setIsSpectralInspectorActive(!ws.isSpectralInspectorActive);
+            }}
+            className={`px-2 py-1 rounded transition-colors flex items-center gap-1 ${
+              ws.isSpectralInspectorActive
+                ? 'text-cyan-300 bg-neutral-900 font-bold border border-cyan-700'
+                : 'hover:text-white hover:bg-neutral-900 text-neutral-300'
+            }`}
+            title="Spectral Reflectance & SAR Backscatter Inspector"
+          >
+            <span>Inspector</span>
+          </button>
+
+          {/* Phase 5: Sentinel Watch Monitoring */}
+          <button
+            id="header-sentinel-watch-btn"
+            onClick={() => ws.setIsSentinelWatchOpen(true)}
+            className={`px-2 py-1 rounded transition-colors flex items-center gap-1 relative ${
+              ws.watches.some((w) => w.status === 'Alert Triggered')
+                ? 'text-amber-300 bg-amber-950/60 border border-amber-800 font-bold'
+                : 'hover:text-white hover:bg-neutral-900 text-neutral-300'
+            }`}
+            title="Sentinel Watch Orbit Monitoring & Alerts"
+          >
+            <span>Watch</span>
+            {ws.watches.some((w) => w.status === 'Alert Triggered') && (
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span>
+            )}
+          </button>
+
           <button
             onClick={() => ws.toggleDrawer('scene')}
             className={`px-2 py-1 rounded transition-colors flex items-center gap-1 ${

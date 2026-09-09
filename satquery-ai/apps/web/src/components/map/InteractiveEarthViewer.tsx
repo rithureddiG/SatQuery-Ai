@@ -63,6 +63,7 @@ export const InteractiveEarthViewer: React.FC<InteractiveEarthViewerProps> = ({
   const clustersGroupRef = useRef<any>(null);
   const measurementLayerRef = useRef<any>(null);
   const polygonLayerRef = useRef<any>(null);
+  const customAoiLayerRef = useRef<any>(null);
 
   const [isMapReady, setIsMapReady] = useState(false);
   const [mapMode, setMapMode] = useState<'EXPLORE' | 'OBSERVE' | 'ANALYZE'>('OBSERVE');
@@ -193,6 +194,7 @@ export const InteractiveEarthViewer: React.FC<InteractiveEarthViewerProps> = ({
       clustersGroupRef.current = L.featureGroup().addTo(map);
       measurementLayerRef.current = L.featureGroup().addTo(map);
       polygonLayerRef.current = L.featureGroup().addTo(map);
+      customAoiLayerRef.current = L.featureGroup().addTo(map);
 
       // Track cursor coordinates
       map.on('mousemove', (e: any) => {
@@ -226,6 +228,9 @@ export const InteractiveEarthViewer: React.FC<InteractiveEarthViewerProps> = ({
         } else if (ws.activeTool === 'measure_area') {
           setPolygonVertices((prev) => [...prev, [clickedLat, clickedLon]]);
         } else {
+          // Trigger Spectral & SAR inspection if inspector tool is active or clicked
+          ws.inspectPixel(clickedLat, clickedLon, ws.customAoi?.geometry, ws.customAoi?.metrics?.areaHa);
+
           // Inspect pixel on click
           const zoneNumber = Math.floor((clickedLon + 180) / 6) + 1;
           const utmE = Math.round(500000 + (clickedLon - (zoneNumber * 6 - 183)) * 111000);
@@ -569,6 +574,52 @@ export const InteractiveEarthViewer: React.FC<InteractiveEarthViewerProps> = ({
       }
     });
   }, [polygonVertices]);
+
+  // Render Custom Canonical AOI with automatic fit-to-bounds
+  useEffect(() => {
+    if (!mapInstanceRef.current || !customAoiLayerRef.current) return;
+
+    import('leaflet').then((L) => {
+      customAoiLayerRef.current.clearLayers();
+      if (!ws.customAoi) return;
+
+      const geom = ws.customAoi.geometry;
+      if (geom.type === 'Polygon' && geom.coordinates && geom.coordinates[0]) {
+        const ring = geom.coordinates[0] as unknown as [number, number][];
+        const latLngs = ring.map((coord) => [coord[1], coord[0]] as [number, number]);
+        const aoiPolygon = L.polygon(latLngs, {
+          color: '#06B6D4',
+          weight: 2.5,
+          dashArray: '5, 5',
+          fillColor: '#06B6D4',
+          fillOpacity: 0.2,
+        });
+
+        const tooltip = `
+          <div style="font-family: monospace; font-size: 11px; padding: 3px 6px;">
+            <div style="font-weight: bold; color: #0891b2;">${ws.customAoi.name}</div>
+            <div style="color: #333;">Area: ${ws.customAoi.metrics.areaHa} ha (${ws.customAoi.metrics.areaM2.toLocaleString()} m²)</div>
+            <div style="color: #666;">CRS: ${ws.customAoi.crs.utmZone}</div>
+            <div style="color: #059669; font-weight: 600;">Status: Canonical Mission AOI</div>
+          </div>
+        `;
+        aoiPolygon.bindTooltip(tooltip, { permanent: false, direction: 'top' });
+        customAoiLayerRef.current.addLayer(aoiPolygon);
+
+        // Auto-fit map viewport to AOI bounds
+        if (ws.customAoi.bbox) {
+          const [minX, minY, maxX, maxY] = ws.customAoi.bbox;
+          mapInstanceRef.current.fitBounds(
+            [
+              [minY, minX],
+              [maxY, maxX],
+            ],
+            { padding: [50, 50], maxZoom: 16 }
+          );
+        }
+      }
+    });
+  }, [ws.customAoi]);
 
   // Handle Swipe Divider Dragging
   const handleSliderDrag = useCallback(

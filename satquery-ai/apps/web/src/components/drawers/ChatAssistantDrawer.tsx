@@ -83,8 +83,27 @@ export const ChatAssistantDrawer: React.FC<ChatAssistantDrawerProps> = ({ isOpen
         action: () => handleSendMessage('What changed between 2024 and 2026?'),
       },
       {
-        label: 'Find Water Bodies',
-        action: () => handleSendMessage('Where is the largest water reservoir in this scene?'),
+        label: 'Custom AOI Importer',
+        action: () => ws.setIsAoiModalOpen(true),
+      },
+      {
+        label: 'Spectral Inspector',
+        action: () => {
+          ws.setIsSpectralInspectorActive(true);
+          ws.setActiveTool('inspect');
+        },
+      },
+      {
+        label: 'Multi-Epoch Passes',
+        action: () => ws.setIsTimelineOpen(true),
+      },
+      {
+        label: 'Synchronized Dual Viewport',
+        action: () => ws.setTemporalMode('Side by Side'),
+      },
+      {
+        label: 'Sentinel Watchdog Monitoring',
+        action: () => ws.setIsSentinelWatchOpen(true),
       },
       {
         label: 'SAR Radar Corroboration',
