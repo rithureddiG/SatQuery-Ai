@@ -60,7 +60,7 @@ interface SearchLocation {
 }
 
 const POPULAR_EO_PRESETS = [
-  { name: 'Hyderabad Urban Corridor', query: 'Hyderabad, India', lat: 17.385, lon: 78.4867, desc: 'Urban Expansion & Lake Basin' },
+  { name: 'Selected AOI', query: 'Hyderabad, India', lat: 17.385, lon: 78.4867, desc: 'Urban Expansion & Lake Basin' },
   { name: 'ISRO SAC Ahmedabad', query: 'Ahmedabad, India', lat: 23.0225, lon: 72.5085, desc: 'EO Operations Headquarters' },
   { name: 'ISRO URSC Bangalore', query: 'Bangalore, India', lat: 12.9716, lon: 77.5946, desc: 'High-Density Tech Corridor' },
   { name: 'SDSC Sriharikota', query: 'Sriharikota, India', lat: 13.7199, lon: 80.2304, desc: 'Launch Complex & Coastal Lagoon' },

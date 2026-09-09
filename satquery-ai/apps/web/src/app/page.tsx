@@ -63,8 +63,8 @@ export default function Home() {
         opticalSARResult,
         activeEvidence,
         health,
-        missionName: 'Bangalore Urban Corridor (Mission 05 Compound)',
-        missionLocation: 'Bangalore Urban Corridor (12.97°N, 77.59°E)',
+        missionName: 'Selected AOI',
+        missionLocation: 'Selected AOI',
         missionSensors: 'Sentinel-2 MSI (10m) + Sentinel-1 SAR C-band',
       });
       const dataUrl = downloadCanvasAsPng(canvas);

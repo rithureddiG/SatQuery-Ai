@@ -146,7 +146,7 @@ export const CANONICAL_MISSIONS: Scenario[] = [
     id: 'mission_05_compound',
     tag: 'MISSION 05 ★',
     name: 'Compound Multimodal Analysis (Grand Showcase)',
-    location: 'Bangalore Urban Corridor (12.97°N, 77.59°E)',
+    location: 'Selected AOI',
     sensors: 'Sentinel-2 Optical (10m) + Sentinel-1 SAR C-band',
     task: 'Temporal Change + Optical & SAR Radar Corroboration',
     lat: 12.9716,
@@ -241,8 +241,8 @@ export const CANONICAL_MISSIONS: Scenario[] = [
   {
     id: 'mission_06_hyderabad',
     tag: 'MISSION 06',
-    name: 'Hyderabad Urban Corridor & Lake Basin',
-    location: 'Hyderabad Urban Corridor (17.39°N, 78.49°E)',
+    name: 'Selected AOI',
+    location: 'Selected AOI',
     sensors: 'Sentinel-2 MSI (10m) + Sentinel-1 C-SAR (10m)',
     task: 'Bi-Temporal Built-Up Expansion & Water Body Dynamics',
     lat: 17.3850,
@@ -734,7 +734,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
   // STAC Observations & Earth Search
   const [stacObservations, setStacObservations] = useState<SatelliteObservationItem[]>(DEFAULT_STAC_OBSERVATIONS);
   const [searchLocationData, setSearchLocationData] = useState<SearchEarthLocation | null>({
-    name: 'Hyderabad Urban Corridor',
+    name: 'Selected AOI',
     displayName: 'Hyderabad, Telangana, India',
     lat: 17.385,
     lon: 78.4867,

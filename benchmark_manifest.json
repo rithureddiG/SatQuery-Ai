@@ -1,0 +1,11 @@
+{
+  "manifest_version": "1.0",
+  "status": "NOT_READY",
+  "policy": "Benchmark data and labels are not present in this repository and no score may be reported until a verified split is installed.",
+  "benchmarks": [
+    {"dataset": "VRSBench", "role": "single_image", "split": null, "sample_count": null, "metrics": ["captioning", "grounding", "vqa"], "status": "NOT_INSTALLED"},
+    {"dataset": "RSVQA", "role": "single_image_vqa", "split": "test", "sample_count": null, "metrics": ["top1_accuracy", "exact_match", "presence_accuracy", "count_accuracy", "area_accuracy"], "status": "NOT_INSTALLED"},
+    {"dataset": "CDVQA", "role": "bi_temporal_vqa", "split": null, "sample_count": null, "metrics": ["answer_accuracy", "change_consistency"], "status": "NOT_INSTALLED"}
+  ],
+  "leakage_policy": {"test_labels_accessible_to_training": false, "test_labels_accessible_to_threshold_tuning": false, "test_labels_accessible_to_prompt_tuning": false}
+}

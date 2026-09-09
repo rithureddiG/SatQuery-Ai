@@ -233,7 +233,7 @@ export function generateAnalyticalSnapshotCanvas(data: AnalyticalSnapshotData): 
     { label: 'COORDINATE BOUNDS (UTM)', val: `X: [${bounds.min_x}, ${bounds.max_x}]  Y: [${bounds.min_y}, ${bounds.max_y}]` },
     { label: 'GEOGRAPHIC EXTENT (WGS84)', val: `Lat: ${wgs84.min_lat}°N – ${wgs84.max_lat}°N  |  Lon: ${wgs84.min_lon}°E – ${wgs84.max_lon}°E` },
     { label: 'AFFINE GEOTRANSFORM', val: '[725000.0, 10.0, 0.0, 2550000.0, 0.0, -10.0]' },
-    { label: 'TARGET AOI LOCATION', val: data.missionLocation || 'Bangalore Urban Corridor (12.97°N, 77.59°E)' },
+    { label: 'TARGET AOI LOCATION', val: data.missionLocation || 'Selected AOI' },
   ];
 
   metaItems.forEach((item, idx) => {

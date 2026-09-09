@@ -43,7 +43,7 @@ interface STACItem {
 }
 
 const PRESET_LOCATIONS = [
-  { name: 'Hyderabad Urban Corridor', lat: 17.3850, lon: 78.4867, utm: 'UTM 44N', area: '38.4 km²' },
+  { name: 'Selected AOI', lat: 17.3850, lon: 78.4867, utm: 'UTM 44N', area: '38.4 km²' },
   { name: 'Bangalore Tech Corridor (SAC)', lat: 12.9716, lon: 77.5946, utm: 'UTM 43N', area: '12.6 km²' },
   { name: 'Ahmedabad (ISRO SAC)', lat: 23.0225, lon: 72.5085, utm: 'UTM 43N', area: '15.8 km²' },
   { name: 'Sriharikota (ISRO SDSC)', lat: 13.7199, lon: 80.2304, utm: 'UTM 44N', area: '22.1 km²' },

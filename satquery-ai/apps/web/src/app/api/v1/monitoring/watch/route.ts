@@ -35,7 +35,7 @@ let watchItems: SentinelWatchItem[] = [
   {
     id: 'watch_01_blr_urban',
     name: 'Bangalore Urban Expansion Corridor',
-    locationName: 'Bangalore Urban Corridor',
+    locationName: 'Selected AOI',
     centroid: [77.5946, 12.9716],
     aoiAreaHa: 25.4,
     sensors: ['Sentinel-2A/B MSI', 'Sentinel-1A SAR C-band'],
@@ -59,7 +59,7 @@ let watchItems: SentinelWatchItem[] = [
   {
     id: 'watch_02_hyd_industrial',
     name: 'Hyderabad Outer Ring Road Logistics Zone',
-    locationName: 'Hyderabad Urban Corridor',
+    locationName: 'Selected AOI',
     centroid: [78.4867, 17.3850],
     aoiAreaHa: 18.2,
     sensors: ['Sentinel-2 MSI', 'Sentinel-1 C-SAR'],

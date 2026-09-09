@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const mission = searchParams.get('mission') || 'bangalore';
-    const locationName = searchParams.get('location') || 'Bangalore Urban Corridor';
+    const locationName = searchParams.get('location') || 'Selected AOI';
 
     const observations: EpochObservation[] = [
       {
