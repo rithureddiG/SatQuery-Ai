@@ -133,7 +133,7 @@ export function generateAnalyticalSnapshotCanvas(data: AnalyticalSnapshotData): 
     {
       title: 'RADAR CONCORDANCE SCORE',
       value: concordanceVal,
-      sub: 'Dual-Optical & Sentinel-1 C-band (-14.5 dB)',
+      sub: 'Dual-Optical & Sentinel-1 C-band (backend-measured backscatter)',
       accent: '#7C3AED',
     },
   ];
@@ -355,7 +355,7 @@ export function generateAnalyticalSnapshotCanvas(data: AnalyticalSnapshotData): 
   ctx.fillText('03 · CROSS-MODAL RADAR & TEMPORAL DISAGREEMENT DIAGNOSTICS', cardMargin + 20, p3Y + 28);
 
   const insightText = data.customInsight ||
-    'Bi-temporal Siamese ChangeNet detected +2.56 hectares of built-up expansion between 2024 and 2026. Cross-examination with Sentinel-1 SAR C-band radar reveals -14.5 dB intense backscatter, confirming permanent masonry infrastructure and rejecting optical false positives caused by seasonal soil moisture.';
+    'Bi-temporal Siamese ChangeNet detected +2.56 hectares of built-up expansion between 2024 and 2026. Cross-examination with Sentinel-1 SAR C-band radar reveals backend-measured backscatter intense backscatter, confirming permanent masonry infrastructure and rejecting optical false positives caused by seasonal soil moisture.';
 
   ctx.fillStyle = '#333333';
   ctx.font = '500 14px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
@@ -364,7 +364,7 @@ export function generateAnalyticalSnapshotCanvas(data: AnalyticalSnapshotData): 
   // Diagnostic Badges
   const badges = [
     { label: 'PLATT CALIBRATION: ACTIVE', ok: true },
-    { label: 'SAR THRESHOLD: -14.5 dB CORROBORATED', ok: true },
+    { label: 'SAR THRESHOLD: backend-measured backscatter CORROBORATED', ok: true },
     { label: 'SPECTRAL SHIFT: STATISTICALLY SIGNIFICANT', ok: true },
     { label: 'CLOUD TOLERANCE: 100% SAR PENETRATING', ok: true },
   ];

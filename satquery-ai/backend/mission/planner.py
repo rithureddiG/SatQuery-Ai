@@ -24,6 +24,7 @@ class NodeType(str, Enum):
     SEMANTIC_CHANGE = "semantic_change"
     DISAGREEMENT_ANALYSIS = "disagreement_analysis"
     TEMPORAL_ANALYSIS = "temporal_analysis"
+    SPATIAL_RANKING = "spatial_ranking"
     EVIDENCE_SYNTHESIS = "evidence_synthesis"
 
 
@@ -138,7 +139,20 @@ class MissionPlanner:
         last_step = val_node.id
 
         # 2. Branch depending on Intent
-        if spec.intent == MissionIntent.SINGLE_IMAGE_VQA:
+        if spec.intent == MissionIntent.SPATIAL_RANKING:
+            ranking_node = MissionNode(
+                id="step_1_water_body_ranking",
+                node_type=NodeType.SPATIAL_RANKING,
+                name="Water Body Spectral Segmentation and Spatial Ranking",
+                tool_or_model="WaterBodyAnalyzer",
+                inputs={"asset_ids": asset_ids, "target": spec.extracted_entities.get("phenomena", ["water"])[0], "operation": "largest"},
+                depends_on=[val_node.id],
+                estimated_vram_mb=300,
+                estimated_latency_sec=0.8,
+            )
+            dag.add_node(ranking_node)
+            last_step = ranking_node.id
+        elif spec.intent == MissionIntent.SINGLE_IMAGE_VQA:
             vqa_node = MissionNode(
                 id="step_1_geochat_vqa",
                 node_type=NodeType.PERCEPTION_INFERENCE,

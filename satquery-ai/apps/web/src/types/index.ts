@@ -116,9 +116,9 @@ export interface ExecutionStep {
 }
 
 export interface ConfidenceScore {
-  overall: number;
-  model_score: number;
-  resolution_score: number;
+  overall: number | null;
+  model_score: number | null;
+  resolution_score: number | null;
   registration_score?: number | null;
   sar_agreement_score?: number | null;
   factors: Record<string, number>;
@@ -305,6 +305,13 @@ export interface AgentQueryLocation {
 export interface AgentQueryResponse {
   query: string;
   intent: string;
+  target?: string;
+  operation?: string;
+  measurement?: string;
+  mission_id?: string;
+  query_hash?: string;
+  result_hash?: string;
+  mission_plan?: Record<string, unknown>;
   task?: string;
   intent_confidence: number;
   job_id: string;

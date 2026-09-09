@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import time
 import uuid
+import hashlib
 from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
 
@@ -26,6 +27,8 @@ from ..mission import (
     MissionDAG,
 )
 from ..evidence import compute_multimodal_confidence, build_evidence, ExecutionStep
+from ..pipelines.water_ranking import run_water_ranking_pipeline
+from ..mission.contracts import validate_result_against_mission
 
 
 class AgentOrchestrator:
@@ -64,6 +67,24 @@ class AgentOrchestrator:
             available_assets_count=len(valid_images),
             has_sar_available=has_sar,
         )
+
+        if spec.intent.value == "spatial_ranking":
+            target = spec.target_phenomena[0] if spec.target_phenomena else "unknown"
+            operation = "smallest" if "smallest" in query.lower() else "largest"
+            result = run_water_ranking_pipeline([img.id for img in valid_images], db, query, operation=operation, mission_id=spec.mission_id)
+            result["mission_plan"] = {
+                "mission_id": spec.mission_id,
+                "query": query,
+                "intent": "spatial_ranking",
+                "target": "water_body" if target == "water" else target,
+                "operation": operation,
+                "measurement": "area",
+                "tool_chain": ["WaterBodyAnalyzer", "SpatialRanking", "GeodesicArea", "EvidenceGate"],
+            }
+            validate_result_against_mission(result["mission_plan"], result)
+            result["query_hash"] = hashlib.sha256(query.strip().lower().encode()).hexdigest()
+            result["result_hash"] = hashlib.sha256(repr(result.get("winner")).encode()).hexdigest()
+            return result
 
         # 3. Scientific Pre-flight Validation Constraints
         if spec.intent.value in ["temporal_change", "compound_investigation"] and len(valid_images) < 2:

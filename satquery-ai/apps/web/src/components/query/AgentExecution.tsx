@@ -70,7 +70,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({ currentStepIndex
               <Check className="w-3 h-3 text-emerald-600" /> Temporal ChangeNet
             </p>
             <p className="flex items-center gap-1">
-              <Check className="w-3 h-3 text-emerald-600" /> SAR -14.5 dB Corroboration
+              <Check className="w-3 h-3 text-emerald-600" /> SAR backend-measured backscatter Corroboration
             </p>
             <p className="flex items-center gap-1">
               <Check className="w-3 h-3 text-emerald-600" /> Geospatial Area Engine

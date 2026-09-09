@@ -13,7 +13,7 @@ const LENSES: { id: LensMode; label: string; desc: string }[] = [
   { id: 'NIR', label: 'False Color NIR', desc: 'Near-Infrared B08 vegetation & canopy reflection' },
   { id: 'SAR', label: 'SAR Radar C-band', desc: 'Sentinel-1 Dual-Pol VV/VH surface texture & backscatter' },
   { id: 'CHANGE', label: 'Temporal Change', desc: 'Siamese ChangeNet 2D probability alteration heatmap' },
-  { id: 'EVIDENCE', label: 'Evidence Multi-Modal', desc: 'Platt-calibrated decision corroboration overlay' },
+  { id: 'EVIDENCE', label: 'Evidence Multi-Modal', desc: 'Backend evidence score decision corroboration overlay' },
 ];
 
 export const LayersDrawer: React.FC<LayersDrawerProps> = ({ isOpen, onClose }) => {

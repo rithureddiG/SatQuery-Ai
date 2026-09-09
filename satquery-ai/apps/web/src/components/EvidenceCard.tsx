@@ -9,7 +9,7 @@ interface EvidenceCardProps {
 export const EvidenceCard: React.FC<EvidenceCardProps> = ({ evidence }) => {
   const [traceOpen, setTraceOpen] = useState(true);
   const conf = evidence.confidence;
-  const overallPercent = Math.round(conf.overall * 100);
+  const overallPercent = conf.overall == null ? null : Math.round(conf.overall * 100);
 
   return (
     <div className="bg-space-900 border border-space-700/80 rounded-xl p-5 space-y-4 shadow-lg">
@@ -35,27 +35,27 @@ export const EvidenceCard: React.FC<EvidenceCardProps> = ({ evidence }) => {
           <span className="text-slate-300 font-semibold">Computed Confidence</span>
           <span
             className={`font-bold ${
-              overallPercent >= 80
+              (overallPercent ?? 0) >= 80
                 ? 'text-emerald-400'
-                : overallPercent >= 60
+                : (overallPercent ?? 0) >= 60
                 ? 'text-amber-400'
                 : 'text-rose-400'
             }`}
           >
-            {overallPercent}%
+            {overallPercent == null ? 'N/A' : `${overallPercent}%`}
           </span>
         </div>
 
         <div className="w-full bg-space-800 h-2 rounded-full overflow-hidden">
           <div
             className={`h-full transition-all duration-500 ${
-              overallPercent >= 80
+              (overallPercent ?? 0) >= 80
                 ? 'bg-emerald-500'
-                : overallPercent >= 60
+                : (overallPercent ?? 0) >= 60
                 ? 'bg-amber-500'
                 : 'bg-rose-500'
             }`}
-            style={{ width: `${overallPercent}%` }}
+            style={{ width: `${overallPercent == null ? 'N/A' : `${overallPercent}%`}` }}
           />
         </div>
 
@@ -63,11 +63,11 @@ export const EvidenceCard: React.FC<EvidenceCardProps> = ({ evidence }) => {
         <div className="grid grid-cols-2 gap-2 pt-1 text-[11px] font-mono">
           <div className="bg-space-950/50 p-2 rounded border border-space-800 flex justify-between">
             <span className="text-slate-400">Model Certainty:</span>
-            <span className="text-slate-200 font-bold">{Math.round(conf.model_score * 100)}%</span>
+            <span className="text-slate-200 font-bold">{conf.model_score == null ? 'N/A' : `${Math.round(conf.model_score * 100)}%`}</span>
           </div>
           <div className="bg-space-950/50 p-2 rounded border border-space-800 flex justify-between">
             <span className="text-slate-400">GSD Suitability:</span>
-            <span className="text-slate-200 font-bold">{Math.round(conf.resolution_score * 100)}%</span>
+            <span className="text-slate-200 font-bold">{conf.resolution_score == null ? 'N/A' : `${Math.round(conf.resolution_score * 100)}%`}</span>
           </div>
         </div>
       </div>

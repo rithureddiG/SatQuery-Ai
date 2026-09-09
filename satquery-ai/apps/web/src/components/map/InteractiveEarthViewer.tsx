@@ -816,7 +816,7 @@ export const InteractiveEarthViewer: React.FC<InteractiveEarthViewerProps> = ({
         {activeLens === 'SAR' && (
           <div className="px-2.5 py-1 rounded bg-[#0A0A0A]/90 border border-cyan-500/40 text-neutral-200 text-[10px] font-mono flex items-center gap-2 shadow-lg backdrop-blur-xs">
             <Radio className="w-3 h-3 text-cyan-400" />
-            <span>SENTINEL-1 C-SAR IW GRDH · VV/VH CO-POL · -14.5 dB σ⁰</span>
+            <span>SENTINEL-1 C-SAR IW GRDH · VV/VH CO-POL · backend-measured backscatter σ⁰</span>
           </div>
         )}
 

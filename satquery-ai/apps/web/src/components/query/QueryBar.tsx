@@ -75,28 +75,6 @@ export const QueryBar: React.FC = () => {
 
     const lower = query.toLowerCase();
 
-    // 1. Natural Follow-Up Queries
-    if (lower.includes('where exactly') || lower.includes('where is it') || lower.includes('zoom to evidence') || lower.includes('show on map')) {
-      ws.setActiveLens('EVIDENCE');
-      if (ws.clusters.length > 0) {
-        ws.selectCluster(ws.clusters[0].id);
-        ws.setPan({ x: -10, y: -15 });
-      }
-      ws.setCustomInsight('The primary built-up expansion is localized at UTM 43N [485200, 1387400] (Cluster 01, 1.82 ha). Viewport centered on altered polygon.');
-      setValidationHint(null);
-      return;
-    }
-
-    if (lower.includes('largest change') || lower.includes('largest cluster')) {
-      ws.setActiveLens('CHANGE');
-      if (ws.clusters.length > 0) {
-        ws.selectCluster(ws.clusters[0].id);
-      }
-      ws.setCustomInsight('Filtered to largest change cluster: Cluster 01 covering 1.82 ha (18,200 m²), representing 71% of total detected alterations.');
-      setValidationHint(null);
-      return;
-    }
-
     if (lower.includes('generate report') || lower.includes('export report') || lower.includes('download pdf')) {
       ws.openExport('pdf');
       ws.setCustomInsight('Generated executive inspection dossier ready for export.');
@@ -104,12 +82,7 @@ export const QueryBar: React.FC = () => {
       return;
     }
 
-    if (lower.includes('sar') || lower.includes('radar') || lower.includes('backscatter')) {
-      ws.setActiveLens('SAR');
-      ws.setCustomInsight('Sentinel-1 C-band SAR cross-examination confirms double-bounce radar return (-14.5 dB σ⁰), verifying solid construction.');
-      setValidationHint(null);
-      return;
-    }
+    // Analytical intent is determined by the backend query planner, never by a UI shortcut.
 
     // Direct Geographic & Coordinate Navigation
     if (lower.includes('hyderabad')) {

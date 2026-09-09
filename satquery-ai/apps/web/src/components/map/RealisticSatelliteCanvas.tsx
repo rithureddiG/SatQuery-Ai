@@ -871,7 +871,7 @@ export const RealisticSatelliteCanvas: React.FC<RealisticSatelliteCanvasProps> =
                   </>
                 )}
 
-                {/* Annotation Tag: 01 · +1.82 ha */}
+                {/* Annotation Tag: 01 · +backend-measured area */}
                 <g transform={`translate(${x}, ${y - 8})`}>
                   <rect
                     x="0"

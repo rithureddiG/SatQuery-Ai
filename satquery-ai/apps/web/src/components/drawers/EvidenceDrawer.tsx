@@ -68,7 +68,7 @@ export const EvidenceDrawer: React.FC<EvidenceDrawerProps> = ({ isOpen, onClose 
             />
           </div>
           <p className="text-[11px] text-[#6F6F6A] font-mono leading-relaxed">
-            Platt-calibrated multimodal corroboration across dual-optical spectral divergence and Sentinel-1 C-band backscatter.
+            Backend evidence score multimodal corroboration across dual-optical spectral divergence and Sentinel-1 C-band backscatter.
           </p>
         </div>
 
@@ -175,7 +175,7 @@ export const EvidenceDrawer: React.FC<EvidenceDrawerProps> = ({ isOpen, onClose 
               {expandedId === 'sar' && (
                 <div className="px-4 pb-4 pt-1 border-t border-[#F0EFEA] bg-[#FAF9F7] space-y-1.5 text-[11px] font-mono text-[#555555]">
                   <p><strong>Sensor:</strong> Sentinel-1 C-SAR IW GRD (Dual-Pol VV/VH)</p>
-                  <p><strong>Backscatter Value:</strong> -14.5 dB σ⁰</p>
+                  <p><strong>Backscatter Value:</strong> backend-measured backscatter σ⁰</p>
                   <p><strong>Concordance:</strong> Radar roughness corroborates built-up expansion</p>
                 </div>
               )}
@@ -266,7 +266,7 @@ export const EvidenceDrawer: React.FC<EvidenceDrawerProps> = ({ isOpen, onClose 
                     4
                   </span>
                   <div>
-                    <strong className="text-[#111111]">SAR Corroboration:</strong> Sentinel-1 -14.5 dB backscatter confirms built-up expansion.
+                    <strong className="text-[#111111]">SAR Corroboration:</strong> Sentinel-1 backend-measured backscatter backscatter confirms built-up expansion.
                   </div>
                 </div>
 

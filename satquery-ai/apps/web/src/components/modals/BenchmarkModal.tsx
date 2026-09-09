@@ -66,7 +66,7 @@ const SIH_REQUIREMENTS: SIHRequirementItem[] = [
     metricLabel: 'F1-Score / mIoU',
     metricScore: '0.871 F1 · 0.782 mIoU',
     status: 'SIH_EVIDENCE_VERIFIED',
-    evidenceSummary: 'Identified 2 distinct clusters (+1.82 ha and +0.74 ha) with ORB sub-pixel alignment (RMSE 0.42 px).',
+    evidenceSummary: 'Identified 2 distinct clusters (+backend-measured area and +0.74 ha) with ORB sub-pixel alignment (RMSE 0.42 px).',
   },
   {
     id: 'req_4',
@@ -99,7 +99,7 @@ const SIH_REQUIREMENTS: SIHRequirementItem[] = [
     metricLabel: 'Area Calculation Error',
     metricScore: '< 0.05% vs Ground Survey',
     status: 'SIH_EVIDENCE_VERIFIED',
-    evidenceSummary: 'Zero LLM hallucination: area (18,200 m², 1.82 ha) and distances calculated purely via geodesics.',
+    evidenceSummary: 'Zero LLM hallucination: area (backend-measured area, backend-measured area) and distances calculated purely via geodesics.',
   },
   {
     id: 'req_7',
@@ -308,7 +308,7 @@ export const BenchmarkModal: React.FC<BenchmarkModalProps> = ({ isOpen, onClose 
                     <span className="text-amber-400">
                       {goldenStep === 1 && '1/5 Ingesting Sentinel-2 & Sentinel-1 GeoTIFFs...'}
                       {goldenStep === 2 && '2/5 ORB Sub-Pixel Registration (RMSE 0.42 px)...'}
-                      {goldenStep === 3 && '3/5 Siamese ChangeNet 2D CNN (1.82 ha detected)...'}
+                      {goldenStep === 3 && '3/5 Siamese ChangeNet 2D CNN (backend-measured area detected)...'}
                       {goldenStep === 4 && '4/5 C-Band SAR Corroboration (+4.1 dB double bounce)...'}
                       {goldenStep === 5 && '5/5 Generating Audit-Grade PDF & RFC 7946 GeoJSON...'}
                     </span>

@@ -33,7 +33,6 @@ export type {
   SentinelWatchItem,
 };
 import { fetchHealth, fetchImagesList, executeAgentQuery } from '../lib/api';
-import { GOLDEN_MISSION_SPEC, createCanonicalFinding } from '../lib/goldenMission';
 import { InspectionDossier, PREVIOUS_INSPECTION_DOSSIERS } from '../types/dossier';
 export type { InspectionDossier };
 export { PREVIOUS_INSPECTION_DOSSIERS };
@@ -160,7 +159,7 @@ export const CANONICAL_MISSIONS: Scenario[] = [
       'Has the built-up area increased between the two dates? Use the optical and SAR observations to corroborate the result and report the total changed area in hectares.',
       'What changed between these dates and where did built-up area increase?',
       'Estimate the total changed area in hectares with radar corroboration.',
-      'Compare optical reflectance against SAR -14.5 dB backscatter.',
+      'Compare optical reflectance against SAR backend-measured backscatter backscatter.',
     ],
   },
   {
@@ -254,7 +253,7 @@ export const CANONICAL_MISSIONS: Scenario[] = [
     dateT2: '2026-09-06',
     prompts: [
       'Analyze industrial and built-up expansion around Hyderabad between T1 and T2',
-      'Corroborate optical findings with Sentinel-1 SAR -14.5 dB backscatter',
+      'Corroborate optical findings with Sentinel-1 SAR backend-measured backscatter backscatter',
       'Detect encroachment into water reservoirs and quantify area in hectares',
     ],
   },
@@ -409,217 +408,11 @@ export const DEFAULT_STAC_OBSERVATIONS: SatelliteObservationItem[] = [
 ];
 
 
-export const DEFAULT_CLUSTERS: ChangeCluster[] = [
-  {
-    id: 'CLUSTER_01',
-    tag: '01',
-    label: 'Altered Built-up Expansion (North Corridor)',
-    area_m2: 18200,
-    area_ha: 1.82,
-    confidence: 0.94,
-    center: { lat: 12.985, lon: 77.612 },
-    bbox: { xmin: 0.35, ymin: 0.28, xmax: 0.52, ymax: 0.52 },
-  },
-  {
-    id: 'CLUSTER_02',
-    tag: '02',
-    label: 'Infrastructure Earthwork & Road Link',
-    area_m2: 7400,
-    area_ha: 0.74,
-    confidence: 0.88,
-    center: { lat: 12.965, lon: 77.635 },
-    bbox: { xmin: 0.58, ymin: 0.52, xmax: 0.68, ymax: 0.64 },
-  },
-];
+export const DEFAULT_CLUSTERS: ChangeCluster[] = [];
+export const DEFAULT_FINDINGS: Finding[] = [];
 
-export const DEFAULT_FINDINGS: Finding[] = [
-  createCanonicalFinding({
-    id: 'finding_tech_park_expansion',
-    missionId: 'mission_05_compound',
-    query: 'What changed between these two observations and where?',
-    title: 'Phase 2 Commercial Tech Park Expansion',
-    category: 'BUILT_UP_EXPANSION',
-    sensor: 'Sentinel-2 MSI (10m) + Sentinel-1 C-SAR (10m)',
-    modality: 'Bi-Temporal Optical + SAR Corroboration',
-    acquisitionTime: '2026-03-19T05:12:44Z',
-    modelName: 'Siamese ChangeNet 2D CNN',
-    modelVersion: 'v2.4.1-sih',
-    checkpoint: 'changenet_s2_weights_val_iou_0.842.pt',
-    realWeights: true,
-    crs: 'EPSG:32643',
-    areaM2: 18200,
-    areaHa: 1.82,
-    bbox: { ymin: 0.28, xmin: 0.35, ymax: 0.52, xmax: 0.52 },
-    modelConfidence: 0.942,
-    evidenceScore: 94.2,
-    calibratedConfidence: 0.938,
-    sourceAssets: ['S2A_MSIL2A_20240314', 'S2A_MSIL2A_20260319', 'S1A_IW_GRDH_20260318'],
-    processingSteps: [
-      'Level-2A BOA Surface Reflectance Ingestion',
-      'ORB Subpixel Co-Registration (RMSE 0.42 px)',
-      'Dual-Branch Siamese CNN Difference Tensor Generation',
-      'Sigmoid Probability Map Thresholding (>0.5)',
-      'Morphological Closing and Connected-Component Vectorization',
-      'Geodesic WGS84 / EPSG:32643 Surface Metric Area Computation',
-    ],
-    rasterWindow: 'preview_window_tech_park.png',
-    overlay: 'polygon_contour_tech_park.geojson',
-    annotation: 'Confirmed 1.82 ha expansion within ±0.15 ha Golden Mission tolerance',
-  }),
-  createCanonicalFinding({
-    id: 'finding_logistics_depot_expansion',
-    missionId: 'mission_05_compound',
-    query: 'What changed between these two observations and where?',
-    title: 'Highway Logistics & Freight Depot Expansion',
-    category: 'INFRASTRUCTURE',
-    sensor: 'Sentinel-2 MSI (10m)',
-    modality: 'Bi-Temporal Optical Reflectance',
-    acquisitionTime: '2026-03-19T05:12:44Z',
-    modelName: 'Siamese ChangeNet 2D CNN',
-    modelVersion: 'v2.4.1-sih',
-    checkpoint: 'changenet_s2_weights_val_iou_0.842.pt',
-    realWeights: true,
-    crs: 'EPSG:32643',
-    areaM2: 7400,
-    areaHa: 0.74,
-    bbox: { ymin: 0.52, xmin: 0.58, ymax: 0.64, xmax: 0.68 },
-    modelConfidence: 0.885,
-    evidenceScore: 88.5,
-    calibratedConfidence: 0.879,
-    sourceAssets: ['S2A_MSIL2A_20240314', 'S2A_MSIL2A_20260319'],
-    processingSteps: [
-      'Level-2A Surface Reflectance Normalization',
-      'ChangeNet Feature Map Extraction',
-      'Vector Polygon Boundary Extraction',
-      'Geodesic Projective Transformation',
-    ],
-    rasterWindow: 'preview_window_depot.png',
-    overlay: 'polygon_contour_depot.geojson',
-    annotation: 'Confirmed 0.74 ha expansion within ±0.10 ha Golden Mission tolerance',
-  }),
-];
-
-export const DEFAULT_EVIDENCE_LAYERS: EvidenceLayerItem[] = [
-  {
-    id: 'temporal',
-    title: 'Temporal ChangeNet',
-    subtitle: '2D Sigmoid Probability Map (mIoU: 0.78)',
-    verified: true,
-    score: 0.94,
-    weight: 0.35,
-    category: 'TEMPORAL',
-    source: 'Siamese ChangeNet CNN',
-    methodology: 'Dual-branch convolution + threshold > 0.5 + OpenCV contour head',
-  },
-  {
-    id: 'optical',
-    title: 'Optical Reflectance',
-    subtitle: 'RGB / NDWI Spectral Divergence Verified',
-    verified: true,
-    score: 0.88,
-    weight: 0.25,
-    category: 'OPTICAL',
-    source: 'Sentinel-2 MSI Surface Reflectance',
-    methodology: 'Band ratio divergence: |NDWI_T2 - NDWI_T1| > 0.35',
-  },
-  {
-    id: 'sar',
-    title: 'SAR σ⁰ Corroboration',
-    subtitle: '-14.5 dB C-band Radar Backscatter',
-    verified: true,
-    score: 0.91,
-    weight: 0.25,
-    category: 'SAR RADAR',
-    source: 'Sentinel-1 C-SAR IW GRD',
-    methodology: 'Decision concordance: 1.0 - 2 * |f_water - f_sar_low|',
-  },
-  {
-    id: 'registration',
-    title: 'Spatial Co-Registration',
-    subtitle: 'ORB / RANSAC Keypoint Inliers (IoU: 0.95)',
-    verified: true,
-    score: 0.96,
-    weight: 0.15,
-    category: 'REGISTRATION',
-    source: 'Affine Geometric Transform Matrix',
-    methodology: 'Homography matrix inlier ratio via RANSAC threshold 3.0px',
-  },
-];
-
-export const DEFAULT_PROVENANCE_STEPS: ProvenanceStep[] = [
-  {
-    id: 'step_1',
-    timestamp: '00:00.12',
-    stage: 'VALIDATION',
-    label: 'INPUT ASSETS VALIDATED',
-    detail: 'Optical T1/T2 + SAR C-band rasters verified on disk & CRS validated',
-    status: 'completed',
-    durationMs: 120,
-  },
-  {
-    id: 'step_2',
-    timestamp: '00:00.35',
-    stage: 'CO_REGISTRATION',
-    label: 'ORB / RANSAC CO-REGISTRATION',
-    detail: 'Keypoint alignment verified (Spatial Registration IoU: 95%)',
-    status: 'completed',
-    durationMs: 230,
-  },
-  {
-    id: 'step_3',
-    timestamp: '00:00.58',
-    stage: 'CHANGENET',
-    label: 'SIAMESE CHANGENET INFERENCE',
-    detail: '2D Sigmoid Probability Tensor generated (>0.5 threshold)',
-    status: 'completed',
-    durationMs: 230,
-  },
-  {
-    id: 'step_4',
-    timestamp: '00:00.72',
-    stage: 'POLYGONIZATION',
-    label: 'CONTOUR POLYGONIZATION',
-    detail: 'OpenCV topological boundary tracing (2 distinct altered clusters)',
-    status: 'completed',
-    durationMs: 140,
-  },
-  {
-    id: 'step_5',
-    timestamp: '00:00.86',
-    stage: 'SPECTRAL_ANALYSIS',
-    label: 'OPTICAL SPECTRAL ANALYSIS',
-    detail: 'RGB / NDWI spectral reflectance divergence calculated',
-    status: 'completed',
-    durationMs: 140,
-  },
-  {
-    id: 'step_6',
-    timestamp: '00:00.99',
-    stage: 'RADAR_CORROBORATION',
-    label: 'SAR RADAR CORROBORATION',
-    detail: '-14.5 dB σ⁰ backscatter confirms urban surface change',
-    status: 'completed',
-    durationMs: 130,
-  },
-  {
-    id: 'step_7',
-    timestamp: '00:01.15',
-    stage: 'GEOMETRIC_AREA',
-    label: 'GEOSPATIAL AREA ENGINE',
-    detail: 'WGS84 → UTM Zone 43N projected metric area: 25,600 m² (2.56 ha)',
-    status: 'completed',
-    durationMs: 160,
-  },
-  {
-    id: 'step_8',
-    timestamp: '00:01.28',
-    stage: 'EVIDENCE_SYNTHESIS',
-    label: 'EVIDENCE & PROVENANCE GRAPH',
-    detail: 'Multi-factor Platt-scaled Evidence Score: 91%',
-    status: 'completed',
-    durationMs: 130,
-  },
-];
+export const DEFAULT_EVIDENCE_LAYERS: EvidenceLayerItem[] = [];
+export const DEFAULT_PROVENANCE_STEPS: ProvenanceStep[] = [];
 
 // Calculation of true Haversine distance and Compass Bearing
 export function calculateGeodesic(
@@ -1054,7 +847,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
   );
   const [findingTitle, setFindingTitle] = useState<string>('Built-up area increased');
   const [customInsight, setCustomInsight] = useState<string>(
-    'Bi-temporal ChangeNet analysis detected 12.4% surface alteration across 25,600 m² (+2.56 ha) divided into 2 distinct expansion clusters. Sentinel-1 C-band SAR (-14.5 dB backscatter) and Sentinel-2 spectral divergence corroborate the new built-up construction.'
+    'Bi-temporal ChangeNet analysis detected 12.4% surface alteration across 25,600 m² (+2.56 ha) divided into 2 distinct expansion clusters. Sentinel-1 C-band SAR (backend-measured backscatter backscatter) and Sentinel-2 spectral divergence corroborate the new built-up construction.'
   );
   const [customAreaHa, setCustomAreaHa] = useState<string>('+2.56 ha');
   const [customAreaM2, setCustomAreaM2] = useState<string>('25,600 m²');
@@ -1628,10 +1421,10 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
       }, 380);
 
       try {
-        const canonicalTargetIds =
-          images.length > 0
-            ? images.map((img) => img.id)
-            : ['img_demo_bitemporal_t1', 'img_demo_bitemporal_t2', 'img_demo_sentinel1_sar'];
+        const canonicalTargetIds = images.map((img) => img.id);
+        if (canonicalTargetIds.length === 0) {
+          throw new Error('Upload or select a verified image before asking an analysis question.');
+        }
 
         const res = await executeAgentQuery(q, canonicalTargetIds, undefined, {
           lat: currentMission.lat,
@@ -1659,15 +1452,21 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
           setCustomInsight(res.answer);
         }
 
-        if (res?.task === 'single_image_vqa') {
-          setFindingTitle('Land cover reasoning verified');
+        if (res?.intent === 'vqa' || res?.intent === 'single_image_vqa') {
+          setFindingTitle('Verified scene description');
           setActiveLens('True Color');
-        } else if (res?.task === 'visual_grounding') {
-          setFindingTitle('Target region grounded');
+        } else if (res?.intent === 'grounding' || res?.intent === 'visual_grounding') {
+          setFindingTitle('Verified target geometry');
           setActiveLens('EVIDENCE');
-        } else {
-          setFindingTitle('Built-up area increased');
+        } else if (res?.intent === 'spatial_ranking') {
+          setFindingTitle(res?.target === 'water_body' ? 'Largest detected water body' : 'Largest detected target');
+          setActiveLens('EVIDENCE');
+        } else if (res?.intent === 'change' || res?.intent === 'temporal_change') {
+          setFindingTitle('Verified temporal change');
           setActiveLens('CHANGE');
+        } else if (res?.intent === 'optical_sar_fusion') {
+          setFindingTitle('Verified optical-SAR corroboration');
+          setActiveLens('EVIDENCE');
         }
 
         if (res?.pipeline_result?.total_area_ha !== undefined) {
@@ -1689,8 +1488,8 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
 
           const newClusters: ChangeCluster[] = rawFeatures.map((f: any, idx: number) => {
             const polyCoords = f.geometry?.coordinates?.[0] || [];
-            let cLat = targetLat + (idx === 0 ? 0.002 : -0.003);
-            let cLon = targetLon + (idx === 0 ? -0.003 : 0.004);
+            let cLat = targetLat;
+            let cLon = targetLon;
             if (polyCoords.length > 0) {
               const sumLon = polyCoords.reduce((acc: number, p: number[]) => acc + p[0], 0);
               const sumLat = polyCoords.reduce((acc: number, p: number[]) => acc + p[1], 0);
@@ -1705,99 +1504,25 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
               area_ha:
                 f.properties?.area_ha ||
                 (f.properties?.area_m2 ? +(f.properties.area_m2 / 10000).toFixed(2) : 0),
-              confidence: f.properties?.confidence || 0.92,
+              confidence: f.properties?.confidence,
               center: { lat: cLat, lon: cLon },
-              bbox: f.properties?.bbox_normalized || {
-                xmin: 0.35 + idx * 0.2,
-                ymin: 0.28 + idx * 0.2,
-                xmax: 0.52 + idx * 0.2,
-                ymax: 0.52 + idx * 0.2,
-              },
+              bbox: f.properties?.bbox_normalized,
             };
           });
           setClusters(newClusters);
           setSelectedClusterId(newClusters[0]?.id || null);
 
-          // Update active finding dynamically
-          const fHa = res.pipeline_result.total_area_ha || 2.56;
-          const fM2 = res.pipeline_result.total_area_m2 || 25600;
-          const dynamicFinding = createCanonicalFinding({
-            id: `finding_${Date.now()}`,
-            missionId: currentMission.id,
-            query: q,
-            title: res.task === 'visual_grounding'
-              ? 'Target Geographic Entity Grounded'
-              : res.task === 'single_image_vqa'
-              ? 'Multispectral Land Cover Verified'
-              : 'Surface Built-Up Expansion Verified',
-            category: res.task === 'visual_grounding' ? 'WATER_BODY' : 'BUILT_UP_EXPANSION',
-            sensor: 'Sentinel-2 MSI (10m) + Sentinel-1 C-SAR (10m)',
-            modality: 'Optical + SAR Corroboration',
-            acquisitionTime: new Date().toISOString(),
-            modelName: 'Siamese ChangeNet 2D CNN',
-            modelVersion: 'v2.4.1-sih',
-            checkpoint: 'changenet_s2_weights_val_iou_0.842.pt',
-            realWeights: true,
-            crs: `EPSG:${res.location?.epsg || 32644}`,
-            areaM2: fM2,
-            areaHa: fHa,
-            bbox: { ymin: 0.28, xmin: 0.35, ymax: 0.52, xmax: 0.52 },
-            modelConfidence: res.confidence?.overall || 0.94,
-            evidenceScore: Math.round((res.confidence?.overall || 0.94) * 100),
-            calibratedConfidence: res.confidence?.overall || 0.93,
-            sourceAssets: ['S2A_MSIL2A_TARGET', 'S1A_IW_GRDH_RADAR'],
-            processingSteps: [
-              'Topological Feature Vectorization',
-              'WGS84 Ellipsoidal Geodesic Polygon Area Integration',
-              'Sentinel-1 SAR Radar Dual-Pol Corroboration (-14.5 dB σ⁰)',
-            ],
-            rasterWindow: 'preview_window.png',
-            overlay: 'polygon_contour.geojson',
-            annotation: `Confirmed ${fHa} ha at ${res.location?.name || currentMission.name}`,
-          });
-          setActiveFinding(dynamicFinding);
+          // Canonical backend geometry is rendered directly; no frontend finding is synthesized.
+          setActiveFinding(null);
         }
         setSystemState('VERIFIED');
         setQueryState('COMPLETE');
-      } catch {
-        // Authoritative fallback analysis synthesis for offline / demo operation
-        const lowerQ = q.toLowerCase();
-        if (lowerQ.includes('water') || lowerQ.includes('lake') || lowerQ.includes('river')) {
-          setFindingTitle('Primary water reservoir localized');
-          setCustomInsight(
-            'Text-guided visual referring expression localized the northeastern water reservoir at UTM 43N [680000, 1387000] covering 2.31 ha (23,100 m²).'
-          );
-          setCustomAreaHa('2.31 ha');
-          setCustomAreaM2('23,100 m²');
-          setActiveLens('EVIDENCE');
-        } else if (
-          lowerQ.includes('describe') ||
-          lowerQ.includes('land cover') ||
-          lowerQ.includes('dominant')
-        ) {
-          setFindingTitle('Land cover classification verified');
-          setCustomInsight(
-            'Sentinel-2 multi-spectral reasoning identified peri-urban terrain with 42% agricultural fields, 35% low-density settlement, and major transportation corridors.'
-          );
-          setCustomAreaHa('10.80 ha');
-          setCustomAreaM2('108,000 m²');
-          setActiveLens('True Color');
-        } else {
-          setFindingTitle('Built-up area increased');
-          setCustomInsight(
-            'Bi-temporal ChangeNet analysis detected 12.4% surface alteration across 25,600 m² (+2.56 ha) divided into 2 distinct expansion clusters. Sentinel-1 C-band SAR (-14.5 dB backscatter) and Sentinel-2 spectral divergence corroborate the new built-up construction.'
-          );
-          setCustomAreaHa('+2.56 ha');
-          setCustomAreaM2('25,600 m²');
-          setActiveLens('CHANGE');
-        }
-        setSystemState('VERIFIED');
-        setQueryState('COMPLETE');
-      } finally {
-        setTimeout(() => {
-          clearInterval(stepInterval);
-          setIsAnalyzing(false);
-        }, 2200);
+      } catch (error) {
+        setCustomInsight(error instanceof Error ? error.message : 'Analysis failed; no result was displayed.');
+        setFindingTitle('No verified result');
+        setActiveFinding(null);
+        setClusters([]);
+        setQueryState('ERROR');
       }
     },
     [queryText, isAnalyzing, images, currentMission]
@@ -2176,4 +1901,3 @@ export const useWorkspace = (): WorkspaceContextType => {
 export const useWorkspaceSafe = (): WorkspaceContextType | null => {
   return useContext(WorkspaceContext);
 };
-

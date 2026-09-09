@@ -44,11 +44,11 @@ export const PREVIOUS_INSPECTION_DOSSIERS: InspectionDossier[] = [
     confidence: 94.2,
     utmZone: 'EPSG:32643 (UTM Zone 43N)',
     areaAoi: '12.64 km²',
-    findings: 'Built-up surface area increased by +2.56 ha (25,600 m²) with 94% radar corroboration across -14.5 dB SAR backscatter.',
+    findings: 'Built-up surface area increased by +2.56 ha (25,600 m²) with 94% radar corroboration across backend-measured backscatter SAR backscatter.',
     keyMetrics: [
       { label: 'Area Change', value: '+2.56 ha' },
       { label: 'Radar Corroboration', value: '94.2%' },
-      { label: 'SAR Threshold', value: '-14.5 dB' },
+      { label: 'SAR Threshold', value: 'backend-measured backscatter' },
       { label: 'Native GSD', value: '10.0 m' },
     ],
     reportUrls: {

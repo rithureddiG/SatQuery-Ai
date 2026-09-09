@@ -272,7 +272,7 @@ export const SatelliteObservationCanvas: React.FC<SatelliteObservationCanvasProp
       <rect x="180" y="220" width="160" height="180" fill="#999999" />
       <rect x="680" y="520" width="180" height="150" fill="#999999" />
 
-      {/* High Double-Bounce Radar Return on New Concrete Roofs (-14.5 dB) */}
+      {/* High Double-Bounce Radar Return on New Concrete Roofs (backend-measured backscatter) */}
       <rect x="360" y="470" width="190" height="160" fill="#E0E0E0" stroke="#FFFFFF" strokeWidth="2" />
       <rect x="375" y="485" width="70" height="60" fill="#FFFFFF" />
       <rect x="460" y="485" width="75" height="60" fill="#FFFFFF" />

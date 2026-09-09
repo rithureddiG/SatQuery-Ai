@@ -22,6 +22,7 @@ class MissionIntent(str, Enum):
     COMPOUND_INVESTIGATION = "compound_investigation"
     SPECTRAL_INSPECTION = "spectral_inspection"
     SAR_ANALYSIS = "sar_analysis"
+    SPATIAL_RANKING = "spatial_ranking"
     UNKNOWN = "unknown"
 
 
@@ -109,6 +110,8 @@ class MissionParser:
         r"\bcloud penetration\b", r"\bbackscatter\b", r"\bpolarimetr(ic|y)\b",
     ]
 
+    RANKING_PATTERNS = [r"\blargest\b", r"\bbiggest\b", r"\bsmallest\b", r"\bwhich .* is\b", r"\brank\b"]
+
     # Target Earth phenomena patterns
     PHENOMENA_MAP = {
         "built_up": [r"\bbuilding(s)?\b", r"\burban\b", r"\broad(s)?\b", r"\bsettlement(s)?\b", r"\bconcrete\b", r"\bhous(e|es|ing)\b"],
@@ -149,9 +152,17 @@ class MissionParser:
         has_grounding = any(re.search(p, q_lower) for p in self.GROUNDING_PATTERNS)
         has_change = any(re.search(p, q_lower) for p in self.CHANGE_PATTERNS)
         has_fusion = any(re.search(p, q_lower) for p in self.FUSION_PATTERNS) or (has_sar_available and "water" in detected_phenomena)
+        is_ranking = any(re.search(p, q_lower) for p in self.RANKING_PATTERNS)
+        ranking_target = "water_body" if "water" in detected_phenomena else ("built_up" if "built_up" in detected_phenomena else None)
 
         # 3. Classify intent & temporal scope
-        if has_change and has_fusion:
+        if is_ranking and ranking_target:
+            intent = MissionIntent.SPATIAL_RANKING
+            temporal = TemporalScope.MONO_TEMPORAL
+            req_assets = 1
+            req_mods = ["optical"]
+            constraints = MissionConstraints(requires_same_aoi=False, requires_coregistration=False, requires_optical=True)
+        elif has_change and has_fusion:
             intent = MissionIntent.COMPOUND_INVESTIGATION
             temporal = TemporalScope.BI_TEMPORAL
             req_assets = max(2, available_assets_count)
@@ -214,5 +225,5 @@ class MissionParser:
             required_modalities=req_mods,
             constraints=constraints,
             extracted_entities={"phenomena": detected_phenomena},
-            confidence=0.92,
+            confidence=1.0 if intent == MissionIntent.SPATIAL_RANKING else 0.92,
         )

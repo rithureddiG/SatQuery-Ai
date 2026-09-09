@@ -44,25 +44,18 @@ export const FloatingFindingSurface: React.FC<FloatingFindingSurfaceProps> = ({
     }
   };
 
-  const title = finding?.title || ws.findingTitle || 'Built-up area increased between observations';
-  const areaHa = finding ? `${finding.spatial.area_ha.toFixed(2)} ha` : ws.totalAreaHa;
-  const areaM2 = finding ? `${finding.spatial.area_m2.toLocaleString()} m²` : ws.totalAreaM2;
+  if (!finding) return null;
+
+  const title = finding.title;
+  const areaHa = `${finding.spatial.area_ha.toFixed(2)} ha`;
+  const areaM2 = `${finding.spatial.area_m2.toLocaleString()} m²`;
   const concordance = finding
     ? Math.round(
         finding.confidence.evidence_score <= 1
           ? finding.confidence.evidence_score * 100
           : finding.confidence.evidence_score
       )
-    : ws.evidenceScore;
-
-  const agentConfidence = ws.agentResult?.confidence;
-  const opticalScore = agentConfidence?.factors?.spatial_resolution
-    ? Math.round(agentConfidence.factors.spatial_resolution * 100)
-    : 88;
-  const temporalScore = agentConfidence?.factors?.model_confidence
-    ? Math.round(agentConfidence.factors.model_confidence * 100)
-    : 94;
-  const sarBackscatterDb = '-14.5 dB σ⁰';
+    : null;
 
   // Minimized state
   if (ws.isFindingDismissed) {
@@ -120,10 +113,9 @@ export const FloatingFindingSurface: React.FC<FloatingFindingSurfaceProps> = ({
         <div>
           <span className="text-[9px] text-neutral-500 uppercase block">CONFIDENCE</span>
           <div className="flex items-center gap-1">
-            <span className="text-base font-bold font-sans text-emerald-400">High</span>
-            <span className="text-xs text-emerald-400 font-mono">({concordance}%)</span>
+            <span className="text-base font-bold font-sans text-neutral-300">{concordance != null ? `${concordance}%` : 'N/A'}</span>
           </div>
-          <span className="text-[9px] text-neutral-400 block font-mono">Platt-Calibrated</span>
+          <span className="text-[9px] text-neutral-400 block font-mono">Not calibrated</span>
         </div>
       </div>
 
@@ -135,15 +127,7 @@ export const FloatingFindingSurface: React.FC<FloatingFindingSurfaceProps> = ({
         <ul className="space-y-1 text-neutral-300 text-[11px] leading-tight">
           <li className="flex items-start gap-1.5">
             <span className="text-emerald-400 shrink-0">•</span>
-            <span>New commercial construction concentrated in industrial corridor.</span>
-          </li>
-          <li className="flex items-start gap-1.5">
-            <span className="text-emerald-400 shrink-0">•</span>
-            <span>{areaHa} altered surface across {ws.clusters.length || 2} distinct polygon clusters.</span>
-          </li>
-          <li className="flex items-start gap-1.5">
-            <span className="text-emerald-400 shrink-0">•</span>
-            <span>Corroborated by Sentinel-1 SAR {sarBackscatterDb} double-bounce backscatter.</span>
+            <span>{areaHa} represented by the selected backend geometry.</span>
           </li>
         </ul>
       </div>
@@ -185,26 +169,16 @@ export const FloatingFindingSurface: React.FC<FloatingFindingSurfaceProps> = ({
               <Cpu className="w-3 h-3 text-satblue-400" />
               PIPELINE EXECUTION TRACE
             </span>
-            <span className="text-emerald-400 font-bold">1.28s Latency</span>
+            <span className="text-emerald-400 font-bold">{ws.agentResult?.total_duration_ms ?? 'N/A'} ms</span>
           </div>
 
           <div className="space-y-1 text-neutral-400 leading-snug">
-            <div>
-              <span className="text-neutral-500">Pipeline: </span>
-              <span className="text-neutral-200">Input Validation → Siamese ChangeNet → SAR Corroboration → Metric Projection</span>
-            </div>
-            <div>
-              <span className="text-neutral-500">Models: </span>
-              <span className="text-neutral-200">Siamese ResNet (ChangeNet) + Sentinel-1 C-SAR Engine</span>
-            </div>
-            <div>
-              <span className="text-neutral-500">Execution Node: </span>
-              <span className="text-emerald-400">Local Geospatial Node (127.0.0.1:8000)</span>
-            </div>
-            <div>
-              <span className="text-neutral-500">Coordinate Reference: </span>
-              <span className="text-neutral-200">WGS84 → UTM Zone 43N (Metric True)</span>
-            </div>
+            {(ws.agentResult?.execution_steps || []).map((step, index) => (
+              <div key={`${step.tool}-${index}`}>
+                <span className="text-neutral-500">{step.tool}: </span>
+                <span className="text-neutral-200">{step.output_summary || step.description || step.status}</span>
+              </div>
+            ))}
           </div>
 
           <button

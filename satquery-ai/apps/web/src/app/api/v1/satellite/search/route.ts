@@ -278,13 +278,7 @@ async function resolveLocation(query: string): Promise<SearchEarthLocation> {
     // Network or timeout failure, continue to fallback
   }
 
-  // Default fallback if geocoder fails or unreachable
-  const defaultTarget = KNOWN_EO_TARGETS[0];
-  return {
-    ...defaultTarget,
-    name: query,
-    displayName: `${query} (Resolved via Regional Geographic Projection)`,
-  };
+  throw new Error(`Location provider returned no result for '${query}'.`);
 }
 
 // Fetch live observations from STAC or generate authentic EO granules
@@ -368,89 +362,7 @@ async function fetchObservations(
     // STAC network timeout or offline
   }
 
-  // If live query yielded fewer than 3 items, complement with high-fidelity deterministic EO observations
-  if (observations.length < 4) {
-    const dates = [
-      { dt: '2026-09-05T05:22:11Z', label: 'Sep 5, 2026', cloud: 1.8, sun: 59.4, orbit: 'R047 Descending' },
-      { dt: '2026-08-31T05:21:49Z', label: 'Aug 31, 2026', cloud: 5.4, sun: 57.2, orbit: 'R047 Descending' },
-      { dt: '2026-03-19T05:18:24Z', label: 'Mar 19, 2026', cloud: 3.1, sun: 54.8, orbit: 'R090 Descending' },
-      { dt: '2024-03-14T05:20:08Z', label: 'Mar 14, 2024', cloud: 2.2, sun: 53.6, orbit: 'R090 Descending' },
-      { dt: '2024-01-18T05:19:30Z', label: 'Jan 18, 2024', cloud: 4.2, sun: 48.2, orbit: 'R047 Descending' },
-    ];
-
-    dates.forEach((d, idx) => {
-      // Sentinel-2 L2A Optical
-      observations.push({
-        id: `S2A_MSIL2A_${d.dt.slice(0, 10).replace(/-/g, '')}_${location.epsg}`,
-        title: `Sentinel-2A MSI L2A Multi-Spectral (${d.label})`,
-        sensor: 'Sentinel-2 L2A',
-        modality: 'optical',
-        date: d.dt,
-        dateFormatted: d.label,
-        cloudCoverPct: d.cloud,
-        sunElevationDeg: d.sun,
-        orbit: d.orbit,
-        resolution: '10.0m GSD (VNIR) / 20.0m (SWIR)',
-        bands: ['B02 Blue', 'B03 Green', 'B04 Red', 'B08 NIR', 'B11 SWIR-1', 'B12 SWIR-2'],
-        thumbnailUrl: '/demo/scene_optical_preview.jpg',
-        utmZone: location.utmZone,
-        epsg: location.epsg,
-        bbox: location.bbox,
-        stacCollection: 'sentinel-2-l2a',
-        provider: 'ESA Copernicus Space Component / Planetary Computer STAC',
-        qualityScore: 96 - idx * 2,
-        processingLevel: 'Level-2A BOA Surface Reflectance',
-      });
-    });
-
-    // Sentinel-1 C-SAR Radar
-    observations.push({
-      id: `S1A_IW_GRDH_1SDV_20260904_${location.epsg}`,
-      title: `Sentinel-1 C-SAR Interferometric Wide Swath (Sep 4, 2026)`,
-      sensor: 'Sentinel-1 C-SAR',
-      modality: 'sar',
-      date: '2026-09-04T00:18:44Z',
-      dateFormatted: 'Sep 4, 2026',
-      cloudCoverPct: 0.0,
-      sunElevationDeg: 0.0,
-      orbit: 'Ascending Track 128',
-      polarization: 'Dual-Pol VV + VH Backscatter',
-      resolution: '10.0m GSD (Ground Range Detected)',
-      bands: ['VV Co-polarization (dB)', 'VH Cross-polarization (dB)', 'VV/VH Ratio'],
-      thumbnailUrl: '/demo/scene_sar_preview.jpg',
-      utmZone: location.utmZone,
-      epsg: location.epsg,
-      bbox: location.bbox,
-      stacCollection: 'sentinel-1-grd',
-      provider: 'ESA Copernicus Radar Constellation',
-      qualityScore: 99,
-      processingLevel: 'Level-1C GRD Radiometrically Terrain Corrected (RTC)',
-    });
-
-    // Landsat-9 OLI-2
-    observations.push({
-      id: `LC09_L2SP_${location.epsg}_20260828`,
-      title: `Landsat-9 OLI-2 / TIRS-2 Surface Reflectance (Aug 28, 2026)`,
-      sensor: 'Landsat-9 OLI',
-      modality: 'multispectral',
-      date: '2026-08-28T05:32:10Z',
-      dateFormatted: 'Aug 28, 2026',
-      cloudCoverPct: 7.4,
-      sunElevationDeg: 56.1,
-      orbit: 'Path 144 / Row 048',
-      resolution: '15.0m Pan / 30.0m Multi-spectral',
-      bands: ['B1 Coastal', 'B2 Blue', 'B3 Green', 'B4 Red', 'B5 NIR', 'B6 SWIR-1', 'B7 SWIR-2'],
-      thumbnailUrl: '/demo/scene_landsat_preview.jpg',
-      utmZone: location.utmZone,
-      epsg: location.epsg,
-      bbox: location.bbox,
-      stacCollection: 'landsat-c2-l2',
-      provider: 'USGS / NASA Earth Resources Observation and Science (EROS)',
-      qualityScore: 92,
-      processingLevel: 'Collection 2 Level-2 Surface Reflectance',
-    });
-  }
-
+  // Only provider-returned observations are valid; offline fallback records are forbidden.
   // Filter if sensor requested
   if (sensorFilter && sensorFilter !== 'all') {
     return observations.filter((o) => o.sensor.toLowerCase().includes(sensorFilter.toLowerCase()));

@@ -11,6 +11,7 @@ class IntentType(str, Enum):
     CHANGE_DETECTION = "change_detection"
     OPTICAL_SAR_FUSION = "optical_sar_fusion"
     COMPOUND_MULTIMODAL = "compound_multimodal"
+    SPATIAL_RANKING = "spatial_ranking"
     UNSUPPORTED = "unsupported"
 
 
@@ -58,6 +59,10 @@ FUSION_KEYWORDS = [
     "joint analysis",
 ]
 
+RANKING_KEYWORDS = ["largest", "biggest", "maximum", "max", "smallest", "which .* is", "rank"]
+WATER_KEYWORDS = ["water", "lake", "reservoir", "river", "pond", "wetland", "flood"]
+BUILT_UP_KEYWORDS = ["built-up", "built up", "urban", "building", "settlement"]
+
 
 def classify_intent(
     query: str,
@@ -73,6 +78,12 @@ def classify_intent(
 
     has_change_kw = any(k in q_lower for k in CHANGE_KEYWORDS)
     has_fusion_kw = any(k in q_lower for k in FUSION_KEYWORDS)
+    is_ranking = any(re.search(k, q_lower) for k in RANKING_KEYWORDS)
+    target = "water_body" if any(k in q_lower for k in WATER_KEYWORDS) else ("built_up" if any(k in q_lower for k in BUILT_UP_KEYWORDS) else None)
+
+    if is_ranking and target:
+        operation = "smallest" if any(k in q_lower for k in ["smallest", "minimum", "min"]) else "largest"
+        return IntentType.SPATIAL_RANKING, 1.0, {"target": target, "operation": operation, "measurement": "area", "task": "spatial_ranking"}
 
     # 1. Compound Multi-Modal Query (Temporal Change + Optical-SAR Corroboration)
     if (has_change_kw and has_fusion_kw) or (has_change_kw and has_sar and available_image_count >= 2):
