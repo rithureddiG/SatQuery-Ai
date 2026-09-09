@@ -50,7 +50,7 @@ def validate_temporal_pair(before_row: ImageRecord, after_row: ImageRecord) -> T
         )
 
     # Compute bounding box IoU if WGS84 bounds exist
-    iou_score = 0.95  # Default high score for aligned pairs
+    iou_score: Optional[float] = None
     b_bounds = before_row.bounds
     a_bounds = after_row.bounds
 
@@ -70,10 +70,12 @@ def validate_temporal_pair(before_row: ImageRecord, after_row: ImageRecord) -> T
             else:
                 iou_score = 0.0
                 warnings.append("Images have no geographic overlap.")
-        except Exception:
-            pass
+        except (KeyError, TypeError, ValueError):
+            warnings.append("Image bounds are malformed; spatial overlap is unknown.")
+    else:
+        warnings.append("Missing geographic bounds; spatial overlap is unknown.")
 
-    is_valid = len(warnings) == 0 or (dim_match and iou_score > 0.1)
+    is_valid = dim_match and iou_score is not None and iou_score > 0.1
     return is_valid, iou_score, warnings
 
 
@@ -87,7 +89,41 @@ def mask_to_geographic_polygons(
 ) -> Tuple[List[Dict[str, Any]], float]:
     """Extract connected change contours from binary mask and map to real-world GeoJSON polygons with area in m²."""
     if not HAS_CV2:
-        return [], 0.0
+        binary = (mask > 0).astype(np.uint8)
+        if binary.shape != (height, width):
+            binary = np.asarray(Image.fromarray(binary).resize((width, height), resample=Image.Resampling.NEAREST))
+        try:
+            from scipy import ndimage
+            labels, count = ndimage.label(binary)
+        except ImportError:
+            labels = np.zeros_like(binary, dtype=np.int32)
+            count = 0
+            for sy, sx in zip(*np.where(binary > 0)):
+                if labels[sy, sx]:
+                    continue
+                count += 1
+                stack = [(int(sy), int(sx))]
+                labels[sy, sx] = count
+                while stack:
+                    cy, cx = stack.pop()
+                    for ny, nx in ((cy - 1, cx), (cy + 1, cx), (cy, cx - 1), (cy, cx + 1)):
+                        if 0 <= ny < height and 0 <= nx < width and binary[ny, nx] and not labels[ny, nx]:
+                            labels[ny, nx] = count
+                            stack.append((ny, nx))
+        features: List[Dict[str, Any]] = []
+        total_area_m2 = 0.0
+        for idx in range(1, count + 1):
+            ys, xs = np.where(labels == idx)
+            if len(xs) < min_pixel_area:
+                continue
+            x0, x1, y0, y1 = float(xs.min()), float(xs.max() + 1), float(ys.min()), float(ys.max() + 1)
+            corners = [pixel_to_coords(x0, y0, transform), pixel_to_coords(x1, y0, transform), pixel_to_coords(x1, y1, transform), pixel_to_coords(x0, y1, transform)]
+            coords = [[round(x, 4), round(y, 4)] for x, y in corners]
+            coords.append(coords[0])
+            area_m2 = float(len(xs) * abs(transform[0] * transform[4]))
+            total_area_m2 += area_m2
+            features.append({"type": "Feature", "id": f"change_region_{idx}", "properties": {"cluster_id": idx, "area_m2": round(area_m2, 2), "area_ha": round(area_m2 / 10000.0, 4), "pixel_count": int(len(xs))}, "geometry": {"type": "Polygon", "coordinates": [coords]}})
+        return features, total_area_m2
 
     mask_uint8 = (mask > 0).astype(np.uint8) * 255
     # Resize mask to original raster dimensions if scaled
@@ -212,6 +248,8 @@ def run_bitemporal_change_pipeline(
         raise FileNotFoundError(f"Image raster(s) not found on disk ({before_path}, {after_path})")
 
     is_valid, reg_quality, warnings = validate_temporal_pair(before_row, after_row)
+    if not is_valid or reg_quality is None:
+        raise ValueError("Temporal pair failed spatial validation: " + "; ".join(warnings))
     steps.append(
         ExecutionStep(
             step_number=1,
@@ -246,7 +284,7 @@ def run_bitemporal_change_pipeline(
     if mask_arr is None:
         mask_arr = np.zeros((256, 256), dtype=np.uint8)
 
-    model_conf = detection_res.get("model_confidence", 0.88)
+    model_conf = detection_res.get("model_confidence")
     is_trained = detection_res.get("is_trained", False)
 
     steps.append(

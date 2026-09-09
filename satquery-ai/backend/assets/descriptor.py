@@ -360,11 +360,11 @@ class AssetFactory:
                             "max_lat": round(b.top, 6),
                         }
                     else:
-                        import rasterio.warp
+                        from rasterio.warp import transform as warp_transform
                         wgs84_crs = CRS.from_epsg(4326)
                         xs = [b.left, b.right, b.left, b.right]
                         ys = [b.bottom, b.bottom, b.top, b.top]
-                        lons, lats = rasterio.warp.transform(ds.crs, wgs84_crs, xs, ys)
+                        lons, lats = warp_transform(ds.crs, wgs84_crs, xs, ys)
                         wgs84_bounds = {
                             "min_lon": round(min(lons), 6),
                             "min_lat": round(min(lats), 6),
@@ -386,7 +386,8 @@ class AssetFactory:
             total_pixels = ds.width * ds.height
 
             for band_idx in range(1, ds.count + 1):
-                data = ds.read(band_idx, window=rasterio.windows.Window(
+                from rasterio.windows import Window
+                data = ds.read(band_idx, window=Window(
                     0, 0, min(ds.width, 2048), min(ds.height, 2048)
                 ))
                 nodata_val = ds.nodatavals[band_idx - 1] if ds.nodatavals else None

@@ -27,9 +27,10 @@ class StorageManager:
     def sanitize_filename(self, filename: str) -> str:
         """Sanitize filename by stripping directory separators and unsafe characters."""
         # Strip paths
-        base_name = Path(filename).name
+        base_name = re.split(r"[\\/]", filename)[-1]
         # Remove any non-alphanumeric chars except dots, underscores, dashes
         clean_name = re.sub(r"[^\w\.-]", "_", base_name)
+        clean_name = re.sub(r"\.{2,}", ".", clean_name)
         if not clean_name or clean_name.startswith("."):
             clean_name = f"image_{clean_name}"
         return clean_name
@@ -76,3 +77,14 @@ class StorageManager:
 
 
 storage_manager = StorageManager()
+
+
+def sanitize_filename(filename: str) -> str:
+    """Module-level safe filename helper for callers without a manager instance."""
+    return storage_manager.sanitize_filename(filename)
+
+
+def validate_file_safety(path: str | Path) -> bool:
+    """Return whether a path resolves inside the managed upload directory."""
+    candidate = Path(path).resolve()
+    return candidate.is_relative_to(storage_manager.upload_dir)

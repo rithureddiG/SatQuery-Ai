@@ -51,6 +51,6 @@ class ChangeDetectorAdapter:
         return self._detector.detect(before_path, after_path, threshold=threshold)
 
 
-# Auto-register change detector in registry
+# Auto-register ChangeNet under the canonical registry key.
 change_detector_adapter = ChangeDetectorAdapter()
-model_registry.register("change_detector", change_detector_adapter)
+model_registry.register("changenet", change_detector_adapter)

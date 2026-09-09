@@ -112,7 +112,7 @@ def run_visual_grounding_pipeline(
     t1 = time.perf_counter()
     grounding_result = geochat_adapter.ground(image_path, referring_expression)
     boxes = grounding_result.get("boxes", [])
-    raw_confidence = grounding_result.get("model_confidence", 0.87)
+    raw_confidence = grounding_result.get("model_confidence")
 
     steps.append(
         ExecutionStep(
@@ -197,7 +197,11 @@ def run_visual_grounding_pipeline(
         ExecutionStep(
             step_number=4,
             tool="evaluate_confidence_and_provenance",
-            description=f"Calculated spatial grounding confidence: {int(confidence.overall * 100)}%",
+            description=(
+                f"Calculated spatial grounding confidence: {int(confidence.overall * 100)}%"
+                if confidence.overall is not None else
+                "Model confidence unavailable; grounding evidence score remains unknown."
+            ),
             status="completed",
             duration_ms=int((time.perf_counter() - t3) * 1000),
         )

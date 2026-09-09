@@ -64,8 +64,8 @@ class MissionExecutionReport:
     steps_executed: int
     steps_telemetry: List[StepTelemetry]
     synthesized_answer: str
-    confidence: float
-    confidence_breakdown: Dict[str, float]
+    confidence: Optional[float]
+    confidence_breakdown: Dict[str, Optional[float]]
     evidence_artifacts: Dict[str, Any]
     warnings: List[str] = field(default_factory=list)
 
@@ -77,7 +77,7 @@ class MissionExecutionReport:
             "steps_executed": self.steps_executed,
             "timeline": [s.to_dict() for s in self.steps_telemetry],
             "synthesized_answer": self.synthesized_answer,
-            "confidence": round(self.confidence, 3),
+            "confidence": round(self.confidence, 3) if self.confidence is not None else None,
             "confidence_breakdown": self.confidence_breakdown,
             "evidence": self.evidence_artifacts,
             "warnings": self.warnings,
@@ -100,13 +100,13 @@ class MissionExecutor:
         telemetry_records: List[StepTelemetry] = []
         warnings: List[str] = []
 
-        synthesized_answer = ""
-        overall_confidence = 0.88
-        confidence_breakdown = {
-            "model_confidence": 0.88,
-            "registration_quality": 0.92,
-            "data_resolution": 0.90,
-            "sensor_agreement": 0.85,
+        synthesized_answer = "Evidence is unavailable for this mission."
+        overall_confidence: Optional[float] = None
+        confidence_breakdown: Dict[str, Optional[float]] = {
+            "model_confidence": None,
+            "registration_quality": None,
+            "data_resolution": None,
+            "sensor_agreement": None,
         }
         evidence_artifacts: Dict[str, Any] = {}
 
@@ -164,7 +164,7 @@ class MissionExecutor:
                     elif "Grounding" in node.name:
                         ground_res = run_visual_grounding_pipeline(image_id=recs[0].id, query=query, db=db)
                         context["grounding_result"] = ground_res
-                        synthesized_answer = f"Localized {ground_res.get('box_count', 0)} feature(s) matching '{query}' with bounding box coordinates."
+                        synthesized_answer = (f"Localized {ground_res.get('box_count', 0)} feature(s) matching '{query}'." if ground_res.get('box_count', 0) else "No grounded detections were produced by the available verified model.")
                         evidence_artifacts["grounding"] = ground_res
                         out_summary = {"box_count": ground_res.get("box_count", 0)}
                     elif "ChangeNet" in node.name:
@@ -220,7 +220,7 @@ class MissionExecutor:
                     )
                     context["fusion_result"] = fusion_res
                     evidence_artifacts["cross_modal_fusion"] = fusion_res
-                    corrob = fusion_res.get("corroboration_score", 0.91)
+                    corrob = fusion_res.get("corroboration_score")
                     confidence_breakdown["sensor_agreement"] = corrob
                     out_summary = {"corroboration_score": corrob}
 
@@ -256,7 +256,7 @@ class MissionExecutor:
                 if node.critical:
                     # Critical node failed
                     synthesized_answer = f"Mission halted at critical step '{node.name}': {err_msg}"
-                    overall_confidence = 0.30
+                    overall_confidence = None
 
             dur = time.perf_counter() - step_t0
             telemetry_records.append(StepTelemetry(
@@ -273,9 +273,8 @@ class MissionExecutor:
         total_dur = time.perf_counter() - t_start
 
         # Composite confidence calculation
-        overall_confidence = round(
-            sum(confidence_breakdown.values()) / max(1, len(confidence_breakdown)), 3
-        )
+        measured = [value for value in confidence_breakdown.values() if value is not None]
+        overall_confidence = round(sum(measured) / len(measured), 3) if measured else None
 
         return MissionExecutionReport(
             mission_id=dag.mission_id,

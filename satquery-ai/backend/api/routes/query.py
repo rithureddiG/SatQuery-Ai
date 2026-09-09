@@ -36,6 +36,15 @@ def handle_agent_query(payload: AgentQueryRequest, db: Session = Depends(get_db)
             db=db,
             aoi_id=payload.aoi_id,
         )
+        if isinstance(result, dict):
+            aliases = {"single_image_vqa": "vqa", "visual_grounding": "grounding", "temporal_change": "change", "cross_modal_fusion": "optical_sar"}
+            result["intent"] = aliases.get(result.get("intent"), result.get("intent"))
+            from ...models_db import AnalysisJob
+            confidence = result.get("confidence") or {}
+            job_id = result.get("job_id")
+            if job_id and not db.get(AnalysisJob, job_id):
+                db.add(AnalysisJob(id=job_id, aoi_id=payload.aoi_id, task=result.get("task") or result["intent"], status="completed", question=payload.query, result=result, confidence=confidence.get("overall") if isinstance(confidence, dict) else None))
+                db.commit()
         return result
     except (ValueError, FileNotFoundError) as e:
         raise HTTPException(status_code=400, detail=str(e))

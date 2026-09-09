@@ -85,7 +85,11 @@ def run_single_image_vqa_pipeline(
         ExecutionStep(
             step_number=3,
             tool="evaluate_confidence_and_provenance",
-            description=f"Calculated resolution-grounded confidence: {int(confidence.overall * 100)}%",
+            description=(
+                f"Calculated resolution-grounded confidence: {int(confidence.overall * 100)}%"
+                if confidence.overall is not None else
+                "Model confidence unavailable; evidence score remains unknown."
+            ),
             status="completed",
             duration_ms=int((time.perf_counter() - t2) * 1000),
             output_summary=f"Overall: {confidence.overall}",

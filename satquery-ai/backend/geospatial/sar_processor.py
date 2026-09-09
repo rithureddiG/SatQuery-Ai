@@ -432,3 +432,10 @@ def compute_texture_variance(
 
     variance = np.maximum(0, local_sq_mean - local_mean ** 2)
     return variance.astype(np.float32)
+
+
+class SARProcessor:
+    """Compatibility facade exposing deterministic SAR operations to the mission executor."""
+    calibrate_sigma0 = staticmethod(calibrate_sigma0)
+    detect_water = staticmethod(detect_water_sar)
+    detect_change = staticmethod(sar_log_ratio_change)

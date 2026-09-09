@@ -1,15 +1,12 @@
 """CRS inspection, validation, and coordinate reference management."""
-
 from dataclasses import dataclass
 from typing import Optional, Dict, Any
-
 try:
     import rasterio.crs
     import pyproj
     HAS_GEO = True
-except ImportError:  # pragma: no cover
+except ImportError:
     HAS_GEO = False
-
 
 @dataclass
 class CRSInfo:
@@ -17,127 +14,43 @@ class CRSInfo:
     valid: bool
     epsg: Optional[int]
     name: Optional[str]
-    crs_type: str  # "projected", "geographic", "compound", "unknown", "missing"
-    status: str    # "ok", "warning", "missing"
+    crs_type: str
+    status: str
     wkt: Optional[str] = None
     proj4: Optional[str] = None
     units: Optional[str] = None
-
     def to_dict(self) -> Dict[str, Any]:
-        return {
-            "present": self.present,
-            "valid": self.valid,
-            "epsg": self.epsg,
-            "name": self.name,
-            "type": self.crs_type,
-            "status": self.status,
-            "units": self.units,
-        }
-
+        return {"present": self.present, "valid": self.valid, "epsg": self.epsg, "name": self.name, "type": self.crs_type, "status": self.status, "units": self.units}
 
 def inspect_crs(crs_input: Any) -> CRSInfo:
-    """Inspect and validate CRS from a rasterio dataset CRS, pyproj CRS, EPSG int, or string."""
     if crs_input is None:
-        return CRSInfo(
-            present=False,
-            valid=False,
-            epsg=None,
-            name=None,
-            crs_type="missing",
-            status="warning",
-            units=None,
-        )
-
-    # If it's already an empty rasterio CRS
-    if hasattr(crs_input, "is_valid") and not crs_input.is_valid:
-        return CRSInfo(
-            present=False,
-            valid=False,
-            epsg=None,
-            name=None,
-            crs_type="missing",
-            status="warning",
-            units=None,
-        )
-
+        return CRSInfo(False, False, None, None, "missing", "warning")
     try:
         if HAS_GEO:
-            # Handle rasterio.crs.CRS or pyproj.crs.CRS or string/int
-            if isinstance(crs_input, rasterio.crs.CRS):
-                epsg = crs_input.to_epsg()
-                wkt = crs_input.to_wkt()
-                proj4 = crs_input.to_proj4()
-                is_proj = crs_input.is_projected
-                is_geographic = crs_input.is_geographic
-                linear_units = getattr(crs_input, "linear_units", None)
-            else:
-                pyproj_crs = pyproj.CRS.from_user_input(crs_input)
-                epsg = pyproj_crs.to_epsg()
-                wkt = pyproj_crs.to_wkt()
-                proj4 = pyproj_crs.to_proj4()
-                is_proj = pyproj_crs.is_projected
-                is_geographic = pyproj_crs.is_geographic
-                linear_units = pyproj_crs.axis_info[0].unit_name if pyproj_crs.axis_info else None
+            source = pyproj.CRS.from_user_input(crs_input)
+            epsg = source.to_epsg()
+            is_projected = source.is_projected
+            name = f"EPSG:{epsg} ({source.name})" if epsg else source.name
+            units = source.axis_info[0].unit_name if source.axis_info else ("metre" if is_projected else "degree")
+            return CRSInfo(True, True, epsg, name, "projected" if is_projected else "geographic" if source.is_geographic else "unknown", "ok", source.to_wkt(), source.to_proj4(), units)
+        text = str(crs_input)
+        epsg = int(text.upper().split("EPSG:")[-1].split()[0]) if "EPSG:" in text.upper() else None
+        return CRSInfo(True, True, epsg, text, "projected" if epsg and epsg != 4326 else "geographic", "ok", units="metre" if epsg and epsg != 4326 else "degree")
+    except Exception as exc:
+        return CRSInfo(True, False, None, str(crs_input), "unknown", "warning", wkt=str(exc))
 
-            if is_proj:
-                crs_type = "projected"
-                units = linear_units or "metre"
-            elif is_geographic:
-                crs_type = "geographic"
-                units = "degree"
-            else:
-                crs_type = "unknown"
-                units = linear_units
+def detect_crs_from_tags(tags: Dict[str, Any]) -> CRSInfo:
+    return inspect_crs(tags.get("CRS") or tags.get("crs") or tags.get("EPSG") or tags.get("epsg"))
 
-            name = None
-            if epsg:
-                name = f"EPSG:{epsg}"
-                if HAS_GEO:
-                    try:
-                        p_crs = pyproj.CRS.from_epsg(epsg)
-                        name = f"EPSG:{epsg} ({p_crs.name})"
-                    except Exception:
-                        pass
+def is_projected_crs(crs_input: Any) -> bool:
+    return inspect_crs(crs_input).crs_type == "projected" and inspect_crs(crs_input).valid
 
-            return CRSInfo(
-                present=True,
-                valid=True,
-                epsg=epsg,
-                name=name or (f"EPSG:{epsg}" if epsg else "Custom CRS"),
-                crs_type=crs_type,
-                status="ok",
-                wkt=wkt,
-                proj4=proj4,
-                units=units,
-            )
-        else:
-            # Fallback without pyproj
-            crs_str = str(crs_input)
-            epsg = None
-            if "EPSG:" in crs_str.upper():
-                try:
-                    epsg = int(crs_str.upper().split("EPSG:")[-1].strip().split()[0])
-                except ValueError:
-                    pass
-
-            return CRSInfo(
-                present=True,
-                valid=True,
-                epsg=epsg,
-                name=f"EPSG:{epsg}" if epsg else crs_str,
-                crs_type="projected" if epsg and epsg != 4326 else ("geographic" if epsg == 4326 else "unknown"),
-                status="ok",
-                wkt=None,
-                proj4=None,
-                units="metre" if epsg and epsg != 4326 else "degree",
-            )
-    except Exception as e:
-        return CRSInfo(
-            present=True,
-            valid=False,
-            epsg=None,
-            name=str(crs_input),
-            crs_type="unknown",
-            status="warning",
-            wkt=str(e),
-        )
+def reproject_bounds_wgs84(bounds: Dict[str, float], crs_input: Any) -> Dict[str, float]:
+    if not bounds:
+        raise ValueError("Bounds are required")
+    if not HAS_GEO:
+        raise RuntimeError("pyproj is required for reprojection")
+    source = pyproj.CRS.from_user_input(crs_input)
+    transformer = pyproj.Transformer.from_crs(source, pyproj.CRS.from_epsg(4326), always_xy=True)
+    corners = [transformer.transform(bounds["min_x"], bounds["min_y"]), transformer.transform(bounds["max_x"], bounds["max_y"])]
+    return {"min_lon": min(c[0] for c in corners), "min_lat": min(c[1] for c in corners), "max_lon": max(c[0] for c in corners), "max_lat": max(c[1] for c in corners)}

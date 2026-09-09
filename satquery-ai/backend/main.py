@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
 from .db import engine, Base
+from sqlalchemy import inspect
 from .api.routes import (
     health_router,
     images_router,
@@ -17,7 +18,13 @@ from .api.routes import (
     evaluation_router,
 )
 
-# Initialize database schema
+# Initialize database schema. Older prototype databases lacked the current columns;
+# reset only an incompatible local SQLite schema rather than failing every request.
+if settings.database_url.startswith("sqlite"):
+    inspector = inspect(engine)
+    image_columns = {column["name"] for column in inspector.get_columns("images")} if "images" in inspector.get_table_names() else set()
+    if image_columns and "filename" not in image_columns:
+        Base.metadata.drop_all(bind=engine)
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
