@@ -103,6 +103,31 @@ class ChangeDetector:
         img_a = self._load(image_before_path).to(self.device)
         img_b = self._load(image_after_path).to(self.device)
 
+        if not self.is_trained:
+            # A missing checkpoint must not produce random neural output. Measure
+            # normalized per-pixel image difference instead and mark confidence unknown.
+            a = img_a[0].detach().cpu().numpy().transpose(1, 2, 0)
+            b = img_b[0].detach().cpu().numpy().transpose(1, 2, 0)
+            difference = np.mean(np.abs(a - b), axis=2)
+            signal_threshold = max(0.02, float(threshold) * 0.05)
+            mask = (difference >= signal_threshold).astype(np.uint8)
+            return {
+                "change_percent": round(float(mask.mean()) * 100, 2),
+                "mask_array": mask,
+                "probability_map": difference,
+                "changed_regions": {"type": "FeatureCollection", "features": self._mask_to_pixel_polygons(mask)},
+                "model_confidence": None,
+                "model_name": "deterministic_raster_difference",
+                "model_version": "v1.0-signal-difference",
+                "weights_available": False,
+                "is_real_weights": False,
+                "fallback_used": True,
+                "execution_mode": "deterministic_signal_difference",
+                "device": str(self.device),
+                "quantization": "FP32",
+                "checkpoint_path": self.checkpoint_path or "None",
+            }
+
         with torch.no_grad():
             logits = self.model(img_a, img_b)
             probs = torch.sigmoid(logits)[0, 0].cpu().numpy()

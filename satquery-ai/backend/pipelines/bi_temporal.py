@@ -350,7 +350,11 @@ def run_bitemporal_change_pipeline(
         ExecutionStep(
             step_number=5,
             tool="evaluate_confidence_and_provenance",
-            description=f"Calculated calibrated confidence: {int((confidence.calibrated_probability or confidence.overall) * 100)}%",
+            description=(
+                f"Calculated calibrated confidence: {int((confidence.calibrated_probability or confidence.overall) * 100)}%"
+                if (confidence.calibrated_probability or confidence.overall) is not None else
+                "Confidence unavailable; deterministic signal difference has no model probability."
+            ),
             status="completed",
             duration_ms=int((time.perf_counter() - t3) * 1000),
         )

@@ -110,7 +110,7 @@ def run_optical_sar_pipeline(
     t1 = time.perf_counter()
     fusion_result = dofa_adapter.fuse_and_corroborate(optical_path, sar_path)
     corroboration_score = fusion_result["corroboration_score"]
-    model_conf = fusion_result["model_confidence"]
+    model_conf = fusion_result.get("model_confidence")
 
     steps.append(
         ExecutionStep(
@@ -120,7 +120,7 @@ def run_optical_sar_pipeline(
             status="completed",
             duration_ms=int((time.perf_counter() - t1) * 1000),
             model="DOFA-ViT-Base",
-            output_summary=f"Corroboration: {int(corroboration_score * 100)}%",
+            output_summary=(f"Corroboration: {int(corroboration_score * 100)}%" if corroboration_score is not None else "Corroboration: unknown"),
         )
     )
 
